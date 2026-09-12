@@ -113,11 +113,7 @@ export default function PlanModal() {
               </li>
               <li className="flex items-center gap-2">
                 <Check className="w-4 h-4 text-emerald-500 shrink-0" />
-                <span><strong>Input AI Gemini</strong> & Scan Struk Vision Tanpa Batas</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <Check className="w-4 h-4 text-emerald-500 shrink-0" />
-                <span><strong>Custom Endpoint & Token</strong> (Proxy, OpenRouter, Groq)</span>
+                <span><strong>Input AI</strong> & Scan Struk Tanpa Batas</span>
               </li>
               <li className="flex items-center gap-2">
                 <Check className="w-4 h-4 text-emerald-500 shrink-0" />

@@ -190,11 +190,13 @@ export async function POST(req: NextRequest) {
         },
       };
 
+      const allDiagnosticErrors: string[] = [];
+
       // Loop through all provided Gemini tokens (Token 1, Token 2, Token 3...)
       for (let kIdx = 0; kIdx < candidateKeys.length; kIdx++) {
         const currentApiKey = candidateKeys[kIdx];
 
-        // 1. Fetch available active models for this specific key (fast ~150ms)
+        // 1. Fetch available active text models for this specific key (fast ~150ms)
         let activeModels: string[] = [];
         try {
           const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${currentApiKey}`, {
@@ -203,37 +205,56 @@ export async function POST(req: NextRequest) {
           if (listRes.ok) {
             const listData = await listRes.json();
             activeModels = (listData.models || [])
-              .filter((m: { supportedGenerationMethods?: string[] }) => m.supportedGenerationMethods?.includes('generateContent'))
+              .filter((m: { supportedGenerationMethods?: string[]; name?: string }) => {
+                const name = (m.name || '').toLowerCase();
+                const isGen = m.supportedGenerationMethods?.includes('generateContent');
+                const isText = !name.includes('tts') && 
+                               !name.includes('audio') && 
+                               !name.includes('embed') && 
+                               !name.includes('imagen') && 
+                               !name.includes('aqa') && 
+                               !name.includes('realtime');
+                return isGen && isText;
+              })
               .map((m: { name: string }) => m.name.replace(/^models\//, ''));
           } else {
             const errText = await listRes.text();
             let msg = errText;
             try { msg = JSON.parse(errText).error?.message || errText; } catch {}
-            lastGeminiError = `Token #${kIdx + 1} (${listRes.status}): ${msg}`;
-            if (listRes.status === 400 || listRes.status === 401 || listRes.status === 403 || listRes.status === 429) {
-              continue; // Langsung coba token cadangan berikutnya
+            allDiagnosticErrors.push(`Token #${kIdx + 1} ListModels (${listRes.status}): ${msg}`);
+            if (listRes.status === 400 || listRes.status === 401 || listRes.status === 429) {
+              continue; // Token tidak valid atau kuota habis, langsung coba token berikutnya
             }
           }
         } catch (e: unknown) {
-          lastGeminiError = `Token #${kIdx + 1}: ` + (e instanceof Error ? e.message : String(e));
+          allDiagnosticErrors.push(`Token #${kIdx + 1} ListModels: ` + (e instanceof Error ? e.message : String(e)));
         }
 
-        // 2. Tentukan model yang benar-benar aktif dan tersedia
+        // 2. Tentukan model teks yang benar-benar aktif dan tersedia
         const modelsToTry: string[] = [];
         if (activeModels.length > 0) {
           if (activeModels.includes(requestedModel)) {
             modelsToTry.push(requestedModel);
           }
-          // Tambahkan model flash aktif lainnya sebagai cadangan otomatis
-          const flashModels = activeModels.filter((m) => m !== requestedModel && m.includes('flash'));
-          const otherModels = activeModels.filter((m) => m !== requestedModel && !m.includes('flash'));
-          modelsToTry.push(...flashModels, ...otherModels);
+          // Prioritas model teks yang umum dan stabil
+          const priorityNames = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-2.5-pro', 'gemini-1.5-pro'];
+          for (const p of priorityNames) {
+            if (activeModels.includes(p) && !modelsToTry.includes(p)) {
+              modelsToTry.push(p);
+            }
+          }
+          // Tambahkan model teks aktif lainnya jika ada
+          for (const m of activeModels) {
+            if (!modelsToTry.includes(m)) {
+              modelsToTry.push(m);
+            }
+          }
         } else {
           // Fallback jika fetch listModels gagal
           modelsToTry.push(requestedModel, 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash');
         }
 
-        const prioritized = Array.from(new Set(modelsToTry)).slice(0, 2);
+        const prioritized = Array.from(new Set(modelsToTry)).slice(0, 3);
 
         for (const cand of prioritized) {
           try {
@@ -260,21 +281,21 @@ export async function POST(req: NextRequest) {
               try {
                 msg = JSON.parse(errText).error?.message || errText;
               } catch {}
-              lastGeminiError = `Token #${kIdx + 1} [${cand}] (${res.status}): ${msg}`;
-              if (res.status === 400 || res.status === 401 || res.status === 403 || res.status === 429) {
+              allDiagnosticErrors.push(`Token #${kIdx + 1} [${cand}] (${res.status}): ${msg}`);
+              // Hanya hentikan token jika tokennya sendiri ditolak (400 / 401 / 429)
+              if (res.status === 400 || res.status === 401 || res.status === 429) {
                 break;
               }
             }
           } catch (e: unknown) {
-            lastGeminiError = `Token #${kIdx + 1} [${cand}]: ` + (e instanceof Error ? e.message : String(e));
+            allDiagnosticErrors.push(`Token #${kIdx + 1} [${cand}]: ` + (e instanceof Error ? e.message : String(e)));
           }
         }
 
         // If this token succeeded, don't need to try subsequent fallback tokens!
         if (geminiSuccessResponse) break;
 
-        // If this token failed, log and proceed to next candidate key
-        console.warn(`Gemini Token #${kIdx + 1} failed: ${lastGeminiError}. Mencoba token cadangan berikutnya...`);
+        console.warn(`Gemini Token #${kIdx + 1} failed. Mencoba token cadangan berikutnya...`);
       }
 
       if (geminiSuccessResponse) {
@@ -289,9 +310,12 @@ export async function POST(req: NextRequest) {
       }
 
       if (config?.isTest) {
+        const errorDetail = allDiagnosticErrors.length > 0
+          ? allDiagnosticErrors.slice(-3).join(' | ')
+          : 'Tidak dapat mengakses model teks generateContent';
         return NextResponse.json(
           {
-            error: `Koneksi Google Gemini gagal di semua (${candidateKeys.length}) token yang diuji. Error terakhir: ${lastGeminiError}. Pastikan API Key valid dan dibuat dari Google AI Studio (aistudio.google.com/app/apikey).`,
+            error: `Koneksi Google Gemini gagal di semua (${candidateKeys.length}) token yang diuji. Detail: ${errorDetail}. Pastikan API Key valid dan dibuat dari Google AI Studio (aistudio.google.com/app/apikey).`,
           },
           { status: 400 }
         );

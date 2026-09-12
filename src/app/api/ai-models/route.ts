@@ -151,7 +151,17 @@ export async function POST(req: NextRequest) {
             if (res.ok) {
               const data = await res.json();
               const supported = (data.models || [])
-                .filter((m: { supportedGenerationMethods?: string[] }) => m.supportedGenerationMethods?.includes('generateContent'))
+                .filter((m: { supportedGenerationMethods?: string[]; name?: string }) => {
+                  const name = (m.name || '').toLowerCase();
+                  const isGen = m.supportedGenerationMethods?.includes('generateContent');
+                  const isText = !name.includes('tts') && 
+                                 !name.includes('audio') && 
+                                 !name.includes('embed') && 
+                                 !name.includes('imagen') && 
+                                 !name.includes('aqa') && 
+                                 !name.includes('realtime');
+                  return isGen && isText;
+                })
                 .map((m: { name: string }) => m.name.replace(/^models\//, ''));
 
               if (supported.length > 0) {

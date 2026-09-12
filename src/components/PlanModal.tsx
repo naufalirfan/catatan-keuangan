@@ -29,16 +29,26 @@ export default function PlanModal() {
 
   if (!showPlanModal) return null;
 
+  const handleClose = () => {
+    if (typeof window !== 'undefined' && (userPlan === 'pro' || isSuperAdmin)) {
+      localStorage.setItem(`catatankeuangan_pro_modal_seen_${user?.id || 'pro'}`, 'true');
+    }
+    setShowPlanModal(false);
+  };
+
   const handleSelectPlan = (plan: 'free' | 'pro') => {
     setUserPlan(plan);
     if (plan === 'pro') {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`catatankeuangan_pro_modal_seen_${user?.id || 'pro'}`, 'true');
+      }
       confetti({
         particleCount: 70,
         spread: 80,
         origin: { y: 0.6 },
       });
     }
-    setShowPlanModal(false);
+    handleClose();
   };
 
   return (
@@ -48,7 +58,7 @@ export default function PlanModal() {
         {/* Header */}
         <div className="relative px-6 pt-6 pb-4 text-center bg-gradient-to-b from-emerald-500/10 via-teal-500/5 to-transparent border-b border-slate-100 dark:border-slate-800">
           <button
-            onClick={() => setShowPlanModal(false)}
+            onClick={handleClose}
             className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
           >
             <X className="w-5 h-5" />
@@ -131,7 +141,11 @@ export default function PlanModal() {
               </li>
               <li className="flex items-center gap-2">
                 <Check className="w-4 h-4 text-emerald-500 shrink-0" />
-                <span>Ekspor Laporan Excel/CSV & Cadangan Cloud</span>
+                <span><strong>Ekspor Laporan Excel (.xlsx)</strong> & CSV Lengkap (Khusus PRO)</span>
+              </li>
+              <li className="flex items-center gap-2">
+                <Check className="w-4 h-4 text-emerald-500 shrink-0" />
+                <span>Cadangan Cloud & Sinkronisasi Otomatis</span>
               </li>
             </ul>
 

@@ -21,6 +21,7 @@ import {
 import { parseGoogleJwt } from '@/lib/googleAuth';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { getUserSession, saveUserSession, clearUserSession } from '@/lib/cookies';
+import * as XLSX from 'xlsx';
 
 const SUPERADMIN_EMAIL = 'naufalfaster@gmail.com';
 
@@ -82,6 +83,7 @@ interface FinanceContextType {
 
   // Data management
   exportToCsv: () => void;
+  exportToExcel: () => void;
   exportToJson: () => void;
   importFromJson: (jsonData: string) => boolean;
   resetToDefault: () => void;
@@ -103,6 +105,7 @@ const STORAGE_KEYS = {
   BUDGETS: (uid: string) => `catatankeuangan_budgets_${uid}`,
   AI_CONFIG: 'catatankeuangan_ai_config',
   MEMBERS: 'catatankeuangan_members_registry',
+  PRO_POPUP_SEEN: (uid: string) => `catatankeuangan_pro_popup_seen_${uid}`,
 };
 
 
@@ -356,7 +359,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
           localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(loggedUser));
           saveUserSession(loggedUser); // 90-day persistent cookie
           loadScopedData(loggedUser);
-          setShowPlanModal(true);
+          triggerPostLoginPopup(loggedUser);
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
           localStorage.removeItem(STORAGE_KEYS.USER);
@@ -412,6 +415,33 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Popup trigger: PRO hanya muncul 1x setelah login, FREE berkala
+  const triggerPostLoginPopup = useCallback((loggedUser: UserProfile) => {
+    if (typeof window === 'undefined') return;
+    if (loggedUser.plan === 'pro') {
+      const seen = localStorage.getItem(STORAGE_KEYS.PRO_POPUP_SEEN(loggedUser.id));
+      if (!seen) {
+        localStorage.setItem(STORAGE_KEYS.PRO_POPUP_SEEN(loggedUser.id), 'true');
+        setShowPlanModal(true);
+      }
+    } else {
+      setShowPlanModal(true);
+    }
+  }, []);
+
+  // Popup berkala tiap 5 menit khusus akun FREE
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!user) return;
+    if (userPlan === 'pro' || isSuperAdmin) return;
+
+    const interval = setInterval(() => {
+      setShowPlanModal(true);
+    }, 5 * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, [user, userPlan, isSuperAdmin]);
+
   const persistAccounts = (newAcc: Account[]) => {
     setAccounts(newAcc);
     if (user && typeof window !== 'undefined') {
@@ -450,10 +480,10 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       }).catch(() => {});
     }
 
-    // Popup Pro vs Free selection on login!
-    setShowPlanModal(true);
+    // Popup post-login (1x untuk PRO, normal untuk FREE)
+    triggerPostLoginPopup(loggedUser);
     return true;
-  }, [loadScopedData]);
+  }, [loadScopedData, triggerPostLoginPopup]);
 
 
   const loginAsDemo = useCallback(() => {
@@ -471,8 +501,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       saveUserSession(demoUser);
     }
     loadScopedData(demoUser);
-    setShowPlanModal(true);
-  }, [loadScopedData]);
+    triggerPostLoginPopup(demoUser);
+  }, [loadScopedData, triggerPostLoginPopup]);
 
   const loginAsAdmin = useCallback(() => {
     const adminUser: UserProfile = {
@@ -489,8 +519,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       saveUserSession(adminUser);
     }
     loadScopedData(adminUser);
-    setShowPlanModal(true);
-  }, [loadScopedData]);
+    triggerPostLoginPopup(adminUser);
+  }, [loadScopedData, triggerPostLoginPopup]);
 
   const logout = useCallback(async () => {
     setUser(null);
@@ -739,6 +769,49 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     document.body.removeChild(link);
   };
 
+  const exportToExcel = useCallback(() => {
+    if (userPlan !== 'pro' && !isSuperAdmin) {
+      setShowPlanModal(true);
+      alert('Ekspor Laporan Excel (.xlsx) adalah fitur eksklusif PRO. Silakan upgrade ke PRO (5000/th) via Instagram @naufal_irfansyah!');
+      return;
+    }
+
+    try {
+      const data = transactions.map((t, index) => ({
+        'No': index + 1,
+        'Tanggal': t.date,
+        'Jam': t.time || '-',
+        'Tipe': t.type === 'income' ? 'Pemasukan' : t.type === 'expense' ? 'Pengeluaran' : 'Transfer',
+        'Kategori': t.category,
+        'Nominal (Rp)': t.amount,
+        'Sumber Rekening / Dompet': t.account_name,
+        'Tujuan Transfer': t.to_account_name || '-',
+        'Catatan': t.note || '-',
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(data);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Laporan Keuangan');
+
+      worksheet['!cols'] = [
+        { wch: 6 },
+        { wch: 14 },
+        { wch: 10 },
+        { wch: 15 },
+        { wch: 24 },
+        { wch: 18 },
+        { wch: 24 },
+        { wch: 24 },
+        { wch: 38 },
+      ];
+
+      XLSX.writeFile(workbook, `Laporan_Keuangan_${new Date().toISOString().split('T')[0]}.xlsx`);
+    } catch (err) {
+      console.error('Gagal export excel:', err);
+      alert('Terjadi kesalahan saat memproses file Excel.');
+    }
+  }, [userPlan, isSuperAdmin, transactions]);
+
   const exportToJson = () => {
     const data = {
       version: '1.0',
@@ -914,6 +987,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         netCashFlowMonth,
         categoryExpensesMonth,
         exportToCsv,
+        exportToExcel,
         exportToJson,
         importFromJson,
         resetToDefault,

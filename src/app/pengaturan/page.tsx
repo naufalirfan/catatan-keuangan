@@ -21,7 +21,8 @@ import {
   EyeOff,
   Cloud,
   CheckCircle2,
-  Server
+  Server,
+  FileSpreadsheet
 } from 'lucide-react';
 import SuperAdminMemberManager from '@/components/SuperAdminMemberManager';
 
@@ -36,6 +37,7 @@ export default function PengaturanPage() {
     isCloudConnected,
     exportToJson,
     exportToCsv,
+    exportToExcel,
     importFromJson,
     resetToDefault
   } = useFinance();
@@ -446,10 +448,39 @@ export default function PengaturanPage() {
 
         <div className="grid grid-cols-2 gap-2">
           <button
+            onClick={exportToExcel}
+            className="p-3 rounded-2xl bg-gradient-to-br from-emerald-500/10 via-teal-500/10 to-amber-500/10 hover:from-emerald-500/20 hover:to-amber-500/20 border border-emerald-500/30 text-left transition-all"
+          >
+            <div className="flex items-center justify-between mb-1">
+              <FileSpreadsheet className="w-4 h-4 text-emerald-500" />
+              <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-amber-500 text-slate-950">PRO</span>
+            </div>
+            <span className="text-xs font-bold text-slate-900 dark:text-slate-100 block">
+              Ekspor Excel (.xlsx)
+            </span>
+            <span className="text-[10px] text-slate-500 dark:text-slate-400">
+              Laporan rapi siap cetak
+            </span>
+          </button>
+
+          <button
+            onClick={exportToCsv}
+            className="p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/60 dark:hover:bg-slate-800 border border-slate-200/60 dark:border-slate-700 text-left transition-colors"
+          >
+            <Download className="w-4 h-4 text-slate-500 mb-1" />
+            <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block">
+              Ekspor CSV
+            </span>
+            <span className="text-[10px] text-slate-400">
+              Format data tabel standar
+            </span>
+          </button>
+
+          <button
             onClick={exportToJson}
             className="p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/60 dark:hover:bg-slate-800 border border-slate-200/60 dark:border-slate-700 text-left transition-colors"
           >
-            <Download className="w-4 h-4 text-emerald-500 mb-1" />
+            <Download className="w-4 h-4 text-blue-500 mb-1" />
             <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block">
               Cadangkan (JSON)
             </span>

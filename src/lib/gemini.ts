@@ -1,0 +1,329 @@
+import { AiConfig, ParsedAiTransaction } from '@/types/finance';
+
+const SYSTEM_INSTRUCTION = `Anda adalah asisten cerdas pencatat keuangan (Finance Tracker AI) berbahasa Indonesia.
+Tugas Anda adalah mengekstrak informasi transaksi keuangan dari input pengguna (teks bebas atau struk belanja) menjadi format JSON yang valid.
+
+Kategori pengeluaran yang umum: Makanan & Minuman, Transportasi & Bensin, Belanja & Kebutuhan, Tagihan Listrik & Wifi, Hiburan & Liburan, Kesehatan, Edukasi, Zakat/Sedekah, Lainnya.
+Kategori pemasukan yang umum: Gaji Bulanan, Freelance & Side Job, Bisnis, Investasi, Hadiah / THR, Pemasukan Lainnya.
+Akun pembayaran yang umum: BCA, Mandiri, BRI, BNI, GoPay, OVO, ShopeePay, DANA, Uang Tunai (Cash).
+
+Anda HARUS mengembalikan HANYA objek JSON tunggal dengan skema berikut tanpa backtick markdown di luar JSON:
+{
+  "type": "expense" | "income" | "transfer",
+  "amount": number (nominal angka saja tanpa titik atau koma, contoh: 50000),
+  "category": string (nama kategori yang paling sesuai),
+  "account": string (nama rekening/dompet pengirim atau pembayaran, default "Uang Tunai (Dompet)" jika tidak disebut),
+  "to_account": string | null (hanya jika tipe "transfer"),
+  "note": string (keterangan ringkas tentang transaksi, misal: "Nasi Padang Komplit"),
+  "date": string (format "YYYY-MM-DD", gunakan tanggal hari ini jika pengguna tidak menyebut tanggal khusus)
+}`;
+
+// Smart local fallback parser jika pengguna belum mengisi API key atau offline
+export function parseTransactionLocally(text: string): ParsedAiTransaction {
+  const lower = text.toLowerCase();
+  const today = new Date().toISOString().split('T')[0];
+
+  // Detect Type
+  let type: 'expense' | 'income' | 'transfer' = 'expense';
+  if (lower.includes('transfer') || lower.includes('kirim uang') || lower.includes('top up') || lower.includes('topup')) {
+    type = 'transfer';
+  } else if (
+    lower.includes('gaji') ||
+    lower.includes('pemasukan') ||
+    lower.includes('dapat transfer') ||
+    lower.includes('dapet transfer') ||
+    lower.includes('terima uang') ||
+    lower.includes('penjualan') ||
+    lower.includes('cair') ||
+    lower.includes('bonus') ||
+    lower.includes('freelance')
+  ) {
+    type = 'income';
+  }
+
+  // Detect Amount (handles: 50k, 50rb, 50.000, 1.5jt, 2jt, 100000, Rp 25.000)
+  let amount = 0;
+  const jtMatch = lower.match(/(\d+(?:[.,]\d+)?)\s*(?:jt|juta)/);
+  const rbMatch = lower.match(/(\d+(?:[.,]\d+)?)\s*(?:k|rb|ribu)/);
+  const rpMatch = lower.match(/(?:rp\.?|idr)?\s*(\d{1,3}(?:[.]\d{3})+|\d+)/);
+
+  if (jtMatch) {
+    amount = Math.round(parseFloat(jtMatch[1].replace(',', '.')) * 1000000);
+  } else if (rbMatch) {
+    amount = Math.round(parseFloat(rbMatch[1].replace(',', '.')) * 1000);
+  } else if (rpMatch) {
+    const rawNum = rpMatch[1].replace(/\./g, '');
+    amount = parseInt(rawNum, 10) || 0;
+  }
+
+  // Detect Account
+  let account = 'Uang Tunai (Dompet)';
+  if (lower.includes('bca')) account = 'BCA Prioritas';
+  else if (lower.includes('mandiri') || lower.includes('livin')) account = 'Mandiri Livin';
+  else if (lower.includes('gopay')) account = 'GoPay';
+  else if (lower.includes('ovo')) account = 'OVO';
+  else if (lower.includes('shopee') || lower.includes('spay')) account = 'ShopeePay';
+  else if (lower.includes('dana')) account = 'DANA';
+  else if (lower.includes('tunai') || lower.includes('cash')) account = 'Uang Tunai (Dompet)';
+
+  // Detect Category
+  let category = type === 'income' ? 'Pemasukan Lainnya' : 'Pengeluaran Lainnya';
+  if (type === 'income') {
+    if (lower.includes('gaji')) category = 'Gaji Bulanan';
+    else if (lower.includes('freelance') || lower.includes('proyek')) category = 'Freelance & Side Job';
+    else if (lower.includes('investasi') || lower.includes('dividen')) category = 'Dividen & Investasi';
+    else if (lower.includes('thr') || lower.includes('hadiah')) category = 'Hadiah / THR / Bonus';
+  } else if (type === 'expense') {
+    if (lower.includes('makan') || lower.includes('kopi') || lower.includes('resto') || lower.includes('mie') || lower.includes('nasi') || lower.includes('ayam') || lower.includes('minum') || lower.includes('snack')) {
+      category = 'Makanan & Minuman';
+    } else if (lower.includes('bensin') || lower.includes('pertamax') || lower.includes('pertalite') || lower.includes('parkir') || lower.includes('tol') || lower.includes('grab') || lower.includes('gojek') || lower.includes('ojol')) {
+      category = 'Transportasi & Bensin';
+    } else if (lower.includes('belanja') || lower.includes('indomaret') || lower.includes('alfamart') || lower.includes('supermarket') || lower.includes('sabun')) {
+      category = 'Belanja & Kebutuhan';
+    } else if (lower.includes('listrik') || lower.includes('pln') || lower.includes('wifi') || lower.includes('indihome') || lower.includes('pulsa') || lower.includes('paket data') || lower.includes('tagihan')) {
+      category = 'Tagihan, Listrik & Wifi';
+    } else if (lower.includes('nonton') || lower.includes('bioskop') || lower.includes('game') || lower.includes('steam') || lower.includes('liburan') || lower.includes('netflix')) {
+      category = 'Hiburan & Liburan';
+    } else if (lower.includes('obat') || lower.includes('dokter') || lower.includes('apotek') || lower.includes('klinik')) {
+      category = 'Kesehatan & Obat';
+    } else if (lower.includes('sedekah') || lower.includes('infaq') || lower.includes('zakat') || lower.includes('donasi')) {
+      category = 'Zakat, Infaq & Sedekah';
+    }
+  }
+
+  // Clean note
+  let note = text
+    .replace(/(?:rp\.?|idr)?\s*\d+(?:[.,]\d+)?\s*(?:jt|juta|k|rb|ribu)?/gi, '')
+    .replace(/(?:pake|pakai|via|dari|ke|masuk)?\s*(?:bca|mandiri|gopay|ovo|shopeepay|dana|cash|tunai)/gi, '')
+    .trim();
+  if (!note) note = text;
+
+  return {
+    type,
+    amount: amount || 25000,
+    category,
+    account,
+    date: today,
+    note: note.slice(0, 50),
+    confidence: 0.85,
+    raw_text: text,
+  };
+}
+
+export async function parseTransactionWithAI(
+  input: string,
+  config: AiConfig,
+  imageBase64?: string
+): Promise<ParsedAiTransaction> {
+  // If no API key / endpoint configured, gracefully use smart regex parser
+  if (config.provider === 'gemini' && !config.geminiApiKey) {
+    return parseTransactionLocally(input);
+  }
+  if (config.provider === 'custom' && !config.customEndpoint) {
+    return parseTransactionLocally(input);
+  }
+
+  try {
+    if (config.provider === 'gemini') {
+      return await callGeminiApi(input, config, imageBase64);
+    } else {
+      return await callCustomEndpoint(input, config, imageBase64);
+    }
+  } catch (error) {
+    console.warn('Gagal memanggil API AI, menggunakan fallback parser lokal:', error);
+    const fallback = parseTransactionLocally(input);
+    fallback.note = `${fallback.note} (offline parsed)`;
+    return fallback;
+  }
+}
+
+async function callGeminiApi(
+  input: string,
+  config: AiConfig,
+  imageBase64?: string
+): Promise<ParsedAiTransaction> {
+  const model = config.geminiModel || 'gemini-1.5-flash';
+  const apiKey = config.geminiApiKey;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+  const contents: Array<{ parts: Array<Record<string, unknown>> }> = [];
+  const parts: Array<Record<string, unknown>> = [];
+
+  if (imageBase64) {
+    // extract mime type and data
+    const match = imageBase64.match(/^data:(image\/[a-zA-Z+]+);base64,(.+)$/);
+    if (match) {
+      parts.push({
+        inlineData: {
+          mimeType: match[1],
+          data: match[2],
+        },
+      });
+    }
+    parts.push({
+      text: `Ini adalah gambar struk belanja. Analisis total harga, nama toko/barang, tanggal, dan metode bayar jika tertera. Prompt tambahan: ${input || 'Ekstrak transaksi dari struk ini'}`,
+    });
+  } else {
+    parts.push({
+      text: `Catat transaksi keuangan ini: "${input}"`,
+    });
+  }
+
+  contents.push({ parts });
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents,
+      systemInstruction: {
+        parts: [{ text: SYSTEM_INSTRUCTION }],
+      },
+      generationConfig: {
+        responseMimeType: 'application/json',
+        temperature: 0.1,
+      },
+    }),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Gemini API Error (${res.status}): ${errText}`);
+  }
+
+  const data = await res.json();
+  const rawResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!rawResponse) {
+    throw new Error('Respon Gemini kosong');
+  }
+
+  const parsed = JSON.parse(rawResponse);
+  return {
+    type: parsed.type || 'expense',
+    amount: Number(parsed.amount) || 0,
+    category: parsed.category || 'Pengeluaran Lainnya',
+    account: parsed.account || 'Uang Tunai (Dompet)',
+    to_account: parsed.to_account || undefined,
+    date: parsed.date || new Date().toISOString().split('T')[0],
+    note: parsed.note || input,
+    confidence: 0.98,
+    raw_text: input,
+  };
+}
+
+async function callCustomEndpoint(
+  input: string,
+  config: AiConfig,
+  imageBase64?: string
+): Promise<ParsedAiTransaction> {
+  let endpoint = config.customEndpoint.trim();
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+
+  if (config.customAuthToken) {
+    headers['Authorization'] = `Bearer ${config.customAuthToken.trim()}`;
+  }
+
+  // Check if endpoint is OpenAI-compatible /chat/completions or custom Gemini proxy
+  const isChatCompletions = endpoint.includes('/chat/completions') || !endpoint.includes('generateContent');
+
+  let body: unknown;
+  if (isChatCompletions) {
+    // OpenAI / Groq / OpenRouter / Ollama format
+    const messages = [
+      { role: 'system', content: SYSTEM_INSTRUCTION },
+      {
+        role: 'user',
+        content: imageBase64
+          ? [
+              { type: 'text', text: `Ekstrak transaksi dari struk ini. Input: ${input || ''}` },
+              { type: 'image_url', image_url: { url: imageBase64 } },
+            ]
+          : `Catat transaksi keuangan ini: "${input}"`,
+      },
+    ];
+
+    body = {
+      model: config.customModel || 'gpt-4o-mini',
+      messages,
+      temperature: 0.1,
+      response_format: { type: 'json_object' },
+    };
+  } else {
+    // Custom Gemini proxy format
+    body = {
+      contents: [{ parts: [{ text: `Catat transaksi keuangan ini: "${input}"` }] }],
+      systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
+    };
+  }
+
+  const res = await fetch(endpoint, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Custom Endpoint Error (${res.status}): ${errText}`);
+  }
+
+  const data = await res.json();
+  let content = '';
+
+  if (data.choices?.[0]?.message?.content) {
+    content = data.choices[0].message.content;
+  } else if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
+    content = data.candidates[0].content.parts[0].text;
+  } else if (typeof data === 'object') {
+    content = JSON.stringify(data);
+  }
+
+  // Clean json if wrapped in markdown ```json ... ```
+  const jsonMatch = content.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    throw new Error('Tidak dapat menemukan format JSON dalam respon server');
+  }
+
+  const parsed = JSON.parse(jsonMatch[0]);
+  return {
+    type: parsed.type || 'expense',
+    amount: Number(parsed.amount) || 0,
+    category: parsed.category || 'Pengeluaran Lainnya',
+    account: parsed.account || 'Uang Tunai (Dompet)',
+    to_account: parsed.to_account || undefined,
+    date: parsed.date || new Date().toISOString().split('T')[0],
+    note: parsed.note || input,
+    confidence: 0.95,
+    raw_text: input,
+  };
+}
+
+export async function testAiConnection(config: AiConfig): Promise<{ success: boolean; message: string; latencyMs: number }> {
+  const start = performance.now();
+  try {
+    const result = await parseTransactionWithAI('Beli kopi 25rb bayar cash', config);
+    const latencyMs = Math.round(performance.now() - start);
+    if (result && result.amount) {
+      return {
+        success: true,
+        message: `Koneksi berhasil! Respon didapat dalam ${latencyMs}ms (Deteksi: Rp ${result.amount.toLocaleString('id-ID')} untuk ${result.note})`,
+        latencyMs,
+      };
+    }
+    return {
+      success: false,
+      message: 'Koneksi terhubung namun format respon tidak sesuai.',
+      latencyMs,
+    };
+  } catch (err: unknown) {
+    const latencyMs = Math.round(performance.now() - start);
+    const msg = err instanceof Error ? err.message : String(err);
+    return {
+      success: false,
+      message: `Gagal terhubung: ${msg}`,
+      latencyMs,
+    };
+  }
+}

@@ -55,7 +55,8 @@ export default function PengaturanPage() {
   } = useFinance();
 
   // Local form state for AI settings
-  const [provider, setProvider] = useState<'gemini' | 'custom'>(aiConfig.provider || 'custom');
+  const [provider, setProvider] = useState<'gemini' | 'custom' | 'auto'>(aiConfig.provider || 'custom');
+  const [autoActiveSubTab, setAutoActiveSubTab] = useState<'gemini' | 'custom'>('gemini');
   const [geminiKeys, setGeminiKeys] = useState<string[]>(() => {
     if (Array.isArray(aiConfig.geminiApiKeys) && aiConfig.geminiApiKeys.length > 0) {
       return aiConfig.geminiApiKeys;
@@ -396,8 +397,10 @@ export default function PengaturanPage() {
       success: true,
       message:
         provider === 'gemini'
-          ? `Pengaturan disimpan! AI sekarang AKTIF menggunakan Google Gemini (${geminiModel}) dengan ${cleanedKeys.length} token terdaftar.`
-          : `Pengaturan disimpan! AI sekarang AKTIF menggunakan Custom Endpoint (${customModel || 'jaa'}).`,
+          ? `Pengaturan disimpan! AI sekarang AKTIF menggunakan Google Gemini Saja (${geminiModel}) dengan ${cleanedKeys.length} token terdaftar.`
+          : provider === 'custom'
+          ? `Pengaturan disimpan! AI sekarang AKTIF menggunakan Custom Endpoint Saja (${customModel || 'jaa'}).`
+          : `Pengaturan disimpan! AI sekarang AKTIF menggunakan Mode Auto Switch (Prioritas Gemini ➔ Fallback Custom Router).`,
     });
     setTimeout(() => setSaveSuccess(false), 3000);
   };
@@ -418,15 +421,24 @@ export default function PengaturanPage() {
       customFallbackModel: customFallbackModel.trim(),
     };
 
-    // Jalankan test AI sekaligus cek status kesehatan token / model
-    const [res] = await Promise.all([
-      testAiConnection(tempConfig),
-      provider === 'gemini' ? checkAllGeminiKeys() : checkModelsHealth(),
-    ]);
+    // Jalankan test AI sekaligus cek status kesehatan token / model sesuai mode
+    const checksToRun: Promise<unknown>[] = [testAiConnection(tempConfig)];
+    if (provider === 'gemini') {
+      checksToRun.push(checkAllGeminiKeys());
+    } else if (provider === 'custom') {
+      checksToRun.push(checkModelsHealth());
+    } else {
+      checksToRun.push(checkAllGeminiKeys());
+      checksToRun.push(checkModelsHealth());
+    }
 
-    if (res.success && res.usedModel && provider === 'gemini') {
-      setGeminiModel(res.usedModel);
-      updateAiConfig({ geminiModel: res.usedModel });
+    const [res] = (await Promise.all(checksToRun)) as [{ success: boolean; message: string; latencyMs: number; usedModel?: string; isFallback?: boolean }];
+
+    if (res.success && res.usedModel && (provider === 'gemini' || provider === 'auto')) {
+      if (res.usedModel.startsWith('gemini')) {
+        setGeminiModel(res.usedModel);
+        updateAiConfig({ geminiModel: res.usedModel });
+      }
     }
 
     setTestResult(res);
@@ -539,22 +551,22 @@ export default function PengaturanPage() {
             </div>
           </div>
 
-        {/* Provider Switcher */}
-        <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-2xl text-xs font-semibold">
+        {/* Provider Switcher: 3 Opsi (Gemini, Custom, Auto Switch) */}
+        <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-2xl text-xs font-semibold">
           <button
             type="button"
             onClick={() => {
               setProvider('gemini');
               setTestResult(null);
             }}
-            className={`py-2 px-2 rounded-xl flex items-center justify-center gap-1.5 transition-all relative ${
+            className={`py-2 px-1.5 rounded-xl flex items-center justify-center gap-1 transition-all relative ${
               provider === 'gemini'
                 ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-sm font-bold'
                 : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
             }`}
           >
             <Sparkles className="w-3.5 h-3.5 shrink-0" />
-            <span className="truncate">Google Gemini (Resmi)</span>
+            <span className="truncate">Gemini</span>
             {aiConfig.provider === 'gemini' && (
               <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 font-extrabold border border-emerald-300 dark:border-emerald-700 shrink-0">
                 Aktif
@@ -568,24 +580,97 @@ export default function PengaturanPage() {
               setProvider('custom');
               setTestResult(null);
             }}
-            className={`py-2 px-2 rounded-xl flex items-center justify-center gap-1.5 transition-all relative ${
+            className={`py-2 px-1.5 rounded-xl flex items-center justify-center gap-1 transition-all relative ${
               provider === 'custom'
-                ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-sm font-bold'
+                ? 'bg-white dark:bg-slate-700 text-cyan-600 dark:text-cyan-400 shadow-sm font-bold'
                 : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
             }`}
           >
             <Server className="w-3.5 h-3.5 shrink-0" />
-            <span className="truncate">Custom Endpoint</span>
+            <span className="truncate">Custom</span>
             {aiConfig.provider === 'custom' && (
-              <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 font-extrabold border border-emerald-300 dark:border-emerald-700 shrink-0">
+              <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-cyan-100 text-cyan-700 dark:bg-cyan-950 dark:text-cyan-300 font-extrabold border border-cyan-300 dark:border-cyan-700 shrink-0">
+                Aktif
+              </span>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setProvider('auto');
+              setTestResult(null);
+            }}
+            className={`py-2 px-1.5 rounded-xl flex items-center justify-center gap-1 transition-all relative ${
+              provider === 'auto'
+                ? 'bg-white dark:bg-slate-700 text-violet-600 dark:text-violet-400 shadow-sm font-bold'
+                : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
+          >
+            <RefreshCw className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">Auto Switch</span>
+            {aiConfig.provider === 'auto' && (
+              <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300 font-extrabold border border-violet-300 dark:border-violet-700 shrink-0">
                 Aktif
               </span>
             )}
           </button>
         </div>
 
+        {/* Mode Information & Sub-Tab Control */}
+        {provider === 'gemini' && (
+          <div className="p-2.5 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200/60 dark:border-emerald-800/60 text-xs text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-emerald-500 shrink-0" />
+            <span><strong>Mode Google Gemini Saja:</strong> AI hanya akan menggunakan Google Gemini resmi. Jika Token #1 terkena limit 429, otomatis berganti ke Token cadangan Gemini Anda. Tidak akan memanggil Custom Router.</span>
+          </div>
+        )}
+
+        {provider === 'custom' && (
+          <div className="p-2.5 rounded-xl bg-cyan-50/80 dark:bg-cyan-950/30 border border-cyan-200/60 dark:border-cyan-800/60 text-xs text-cyan-800 dark:text-cyan-300 flex items-center gap-2">
+            <Server className="w-4 h-4 text-cyan-500 shrink-0" />
+            <span><strong>Mode Custom Endpoint Saja:</strong> AI hanya akan menggunakan Custom Endpoint (9Router / OpenAI). Jika model utama gagal, otomatis beralih ke daftar model cadangan. Tidak akan memanggil Gemini.</span>
+          </div>
+        )}
+
+        {provider === 'auto' && (
+          <div className="space-y-2">
+            <div className="p-2.5 rounded-xl bg-violet-50/80 dark:bg-violet-950/30 border border-violet-200/60 dark:border-violet-800/60 text-xs text-violet-800 dark:text-violet-300 flex items-center gap-2">
+              <RefreshCw className="w-4 h-4 text-violet-500 shrink-0" />
+              <span><strong>Mode Auto Switch (Hybrid Gemini & Custom):</strong> AI memprioritaskan Google Gemini. Jika seluruh token Gemini habis kuota (429) atau error, sistem otomatis langsung beralih ke Custom Router tanpa error bagi member.</span>
+            </div>
+
+            {/* Sub-tab untuk mengatur kedua konfigurasi */}
+            <div className="grid grid-cols-2 gap-1 p-1 bg-slate-100 dark:bg-slate-800/70 rounded-xl text-xs font-semibold">
+              <button
+                type="button"
+                onClick={() => setAutoActiveSubTab('gemini')}
+                className={`py-1.5 px-2 rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+                  autoActiveSubTab === 'gemini'
+                    ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-sm font-bold'
+                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>1. Atur Gemini (Utama)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setAutoActiveSubTab('custom')}
+                className={`py-1.5 px-2 rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+                  autoActiveSubTab === 'custom'
+                    ? 'bg-white dark:bg-slate-700 text-cyan-600 dark:text-cyan-400 shadow-sm font-bold'
+                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                }`}
+              >
+                <Server className="w-3.5 h-3.5" />
+                <span>2. Atur Custom (Cadangan)</span>
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Gemini Provider Fields */}
-        {provider === 'gemini' ? (
+        {(provider === 'gemini' || (provider === 'auto' && autoActiveSubTab === 'gemini')) ? (
           <div className="space-y-4 pt-1">
             {/* Header with Title and "Tes Semua Token" */}
             <div className="flex items-center justify-between flex-wrap gap-2">

@@ -48,7 +48,7 @@ export interface Budget {
 }
 
 export interface AiConfig {
-  provider: 'gemini' | 'custom';
+  provider: 'gemini' | 'custom' | 'auto';
   geminiApiKey: string;
   geminiApiKeys?: string[];
   geminiModel: string;

@@ -152,8 +152,16 @@ export async function parseTransactionWithAI(
   try {
     if (config.provider === 'gemini') {
       return await callGeminiApi(input, config, imageBase64);
-    } else {
+    } else if (config.provider === 'custom') {
       return await callCustomEndpoint(input, config, imageBase64);
+    } else {
+      // Mode 'auto': coba Gemini dulu, jika gagal otomatis coba Custom Endpoint
+      try {
+        return await callGeminiApi(input, config, imageBase64);
+      } catch (geminiErr) {
+        console.warn('Auto Switch: Gemini gagal, mencoba Custom Router...', geminiErr);
+        return await callCustomEndpoint(input, config, imageBase64);
+      }
     }
   } catch (error) {
     console.warn('Gagal memanggil API AI:', error);
@@ -479,13 +487,18 @@ export async function testAiConnection(config: AiConfig): Promise<{
     const latencyMs = Math.round(performance.now() - start);
     if (result && typeof result.amount === 'number' && result.amount > 0) {
       const rawResult = result as unknown as Record<string, unknown>;
-      const rawProvider = (rawResult._provider as string) || (isGemini ? 'gemini' : 'custom');
+      const rawProvider = (rawResult._provider as string) || (config.provider === 'gemini' ? 'gemini' : 'custom');
       const usedModel =
         (rawResult._usedModel as string) ||
-        (isGemini ? config.geminiModel || 'gemini-1.5-flash' : config.customModel);
+        (rawProvider === 'gemini' ? config.geminiModel || 'gemini-flash-latest' : config.customModel);
       const isFallback = Boolean(rawResult._isFallback);
+      const isAutoSwitched = Boolean(rawResult._isAutoSwitched);
 
-      const providerLabel = rawProvider === 'gemini' ? 'Google Gemini' : 'Custom Router';
+      let providerLabel = rawProvider === 'gemini' ? 'Google Gemini' : 'Custom Router';
+      if (config.provider === 'auto') {
+        providerLabel = isAutoSwitched ? 'Auto Switch ➔ Custom Router' : 'Auto Switch ➔ Google Gemini';
+      }
+
       const statusTag = isFallback
         ? `[Cadangan: ${usedModel}]`
         : `[${providerLabel}: ${usedModel}]`;

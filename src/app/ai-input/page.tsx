@@ -214,7 +214,7 @@ export default function AiInputPage() {
           >
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             <span className="text-[11px] truncate max-w-[90px]">
-              {aiConfig.provider === 'gemini' ? 'Gemini AI' : 'Custom AI'}
+              {aiConfig.provider === 'gemini' ? 'Gemini AI' : aiConfig.provider === 'auto' ? 'Auto AI 🔀' : 'Custom AI'}
             </span>
             <Settings className="w-3 h-3 text-slate-400" />
           </Link>

@@ -451,8 +451,9 @@ export async function testAiConnection(config: AiConfig): Promise<{
     const result = await parseTransactionWithAI('Beli kopi 25rb bayar cash', config);
     const latencyMs = Math.round(performance.now() - start);
     if (result && typeof result.amount === 'number' && result.amount > 0) {
-      const usedModel = ((result as Record<string, unknown>)._usedModel as string) || config.customModel;
-      const isFallback = Boolean((result as Record<string, unknown>)._isFallback);
+      const rawResult = result as unknown as Record<string, unknown>;
+      const usedModel = (rawResult._usedModel as string) || config.customModel;
+      const isFallback = Boolean(rawResult._isFallback);
 
       const statusTag = isFallback
         ? `[Dialihkan ke Cadangan: ${usedModel}]`

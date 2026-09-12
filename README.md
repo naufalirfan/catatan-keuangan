@@ -69,8 +69,9 @@ Pengguna dapat mencatat pengeluaran harian hanya dengan mengetik bahasa santai, 
   - **Unlimited** dompet, rekening bank & e-wallet.
   - **Input AI & Scan Struk Tanpa Batas**.
   - Ekspor data laporan Excel / CSV & Cadangan Cloud.
-- **Hak Khusus Superadmin ([naufalfaster@gmail.com](mailto:naufalfaster@gmail.com))**:
+- **Hak Khusus Superadmin**:
   - Memiliki akses penuh ke panel kontrol konfigurasi AI (Gemini API Key, Custom Endpoint URL, dan Bearer Token).
+
   - Member biasa tidak perlu memikirkan teknis API key; mereka langsung menikmati fitur AI yang telah disiapkan Superadmin.
   - Sakelar instan di dashboard untuk mengubah status akun kapan saja.
 - **Popup Pilihan Paket**: Otomatis menyapa pengguna saat pertama kali berhasil masuk.
@@ -170,9 +171,9 @@ Aplikasi ini dirancang dan dikembangkan oleh:
 * **Nama:** [Naufal Irfansyah](https://www.instagram.com/naufal_irfansyah)
 * **Instagram:** [@naufal_irfansyah](https://www.instagram.com/naufal_irfansyah)
 * **GitHub:** [@naufalirfan](https://github.com/naufalirfan)
-* **Superadmin Email:** [naufalfaster@gmail.com](mailto:naufalfaster@gmail.com)
 
 Jangan ragu untuk mengunjungi profil Instagram **[@naufal_irfansyah](https://www.instagram.com/naufal_irfansyah)** untuk diskusi, kolaborasi, atau memberikan kritik & saran yang membangun!
+
 
 ---
 

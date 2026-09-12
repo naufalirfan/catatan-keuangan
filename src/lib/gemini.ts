@@ -115,6 +115,8 @@ export async function parseTransactionWithAI(
   config: AiConfig,
   imageBase64?: string
 ): Promise<ParsedAiTransaction> {
+  let serverErrorMessage = '';
+
   // 1. Try our Next.js Server API route first (eliminates browser CORS issues completely)
   try {
     const res = await fetch('/api/parse-ai', {
@@ -127,6 +129,13 @@ export async function parseTransactionWithAI(
       const data = await res.json();
       if (data && typeof data.amount === 'number' && data.amount > 0) {
         return data;
+      } else if (data && data.note) {
+        return data;
+      }
+    } else {
+      const errData = await res.json().catch(() => null);
+      if (errData?.error) {
+        serverErrorMessage = errData.error;
       }
     }
   } catch (serverErr) {
@@ -143,7 +152,8 @@ export async function parseTransactionWithAI(
   } catch (error) {
     console.warn('Gagal memanggil API AI:', error);
     if (imageBase64) {
-      throw new Error('Gagal mengekstrak struk dengan AI. Pastikan foto struk terlihat jelas atau masukkan nominal secara manual.');
+      const detail = serverErrorMessage ? ` (${serverErrorMessage})` : '';
+      throw new Error(`Gagal mengekstrak struk dengan AI${detail}. Pastikan foto struk terlihat jelas atau masukkan nominal secara manual.`);
     }
     const fallback = parseTransactionLocally(input);
     fallback.note = `${fallback.note} (offline parsed)`;

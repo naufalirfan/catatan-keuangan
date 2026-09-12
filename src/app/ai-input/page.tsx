@@ -21,6 +21,47 @@ import {
   X
 } from 'lucide-react';
 
+// Helper to compress/downscale image on canvas to avoid large payloads & speed up AI recognition
+function compressImage(file: File, maxWidth = 1200, maxHeight = 1200, quality = 0.85): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(event.target?.result as string);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = () => resolve(event.target?.result as string);
+    };
+    reader.onerror = (error) => reject(error);
+  });
+}
+
 export default function AiInputPage() {
   const { aiConfig, isSuperAdmin } = useFinance();
 
@@ -101,22 +142,23 @@ export default function AiInputPage() {
     }
   };
 
-  // Image Upload handler
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Image Upload handler with auto-compression
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Ukuran gambar maksimal 5MB');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      setReceiptImage(reader.result as string);
+    try {
+      const compressed = await compressImage(file);
+      setReceiptImage(compressed);
       setMode('receipt');
-    };
-    reader.readAsDataURL(file);
+    } catch {
+      const reader = new FileReader();
+      reader.onload = () => {
+        setReceiptImage(reader.result as string);
+        setMode('receipt');
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleProcess = async () => {

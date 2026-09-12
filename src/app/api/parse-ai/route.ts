@@ -1,18 +1,118 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+export const maxDuration = 60;
+export const dynamic = 'force-dynamic';
+
 const SYSTEM_INSTRUCTION = `Anda adalah asisten pencatat keuangan pribadi pintar dan akurat untuk pengguna Indonesia.
 Tugas Anda adalah mengekstrak data transaksi (pengeluaran, pemasukan, atau transfer) dari teks atau gambar struk/nota belanja.
 Cari total akhir yang dibayarkan (Subtotal / Total / Bayar).
-Kembalikan HANYA format JSON valid tanpa markdown, tanpa teks pengantar, dengan struktur berikut:
+Kembalikan HANYA format JSON valid tanpa markdown, tanpa teks pengantar, dengan struktur:
 {
   "type": "expense" | "income" | "transfer",
-  "amount": number (nominal angka bulat tanpa titik atau koma, contoh jika total 200.000.000 maka tulis 200000000),
+  "amount": number (nominal angka bulat tanpa titik atau koma, contoh: 200000000),
   "category": "Makanan & Minuman" | "Transportasi & Bensin" | "Belanja & Kebutuhan" | "Tagihan, Listrik & Wifi" | "Hiburan & Liburan" | "Kesehatan & Obat" | "Pendidikan" | "Zakat, Infaq & Sedekah" | "Gaji Bulanan" | "Freelance & Side Job" | "Dividen & Investasi" | "Hadiah / THR / Bonus" | "Pengeluaran Lainnya" | "Pemasukan Lainnya" | "Transfer Saldo",
   "account": "Uang Tunai (Dompet)" | "Rekening BCA" | "Bank Mandiri" | "GoPay" | "OVO" | "ShopeePay" | "DANA",
   "to_account": string | null,
   "date": "YYYY-MM-DD",
-  "note": string (keterangan ringkas transaksi, nama toko/barang dan nomor struk bila ada)
+  "note": string (nama toko/merchant dan nomor struk bila ada)
 }`;
+
+function extractTransaction(content: string, inputFallback?: string) {
+  // 1. Try finding JSON block
+  const jsonMatch = content.match(/\{[\s\S]*?\}/);
+  if (jsonMatch) {
+    try {
+      const parsed = JSON.parse(jsonMatch[0]);
+      let amt = 0;
+      if (typeof parsed.amount === 'number') {
+        amt = parsed.amount;
+      } else if (typeof parsed.amount === 'string') {
+        amt = parseInt(parsed.amount.replace(/[^0-9]/g, ''), 10) || 0;
+      }
+
+      if (amt > 0) {
+        return {
+          type: parsed.type || 'expense',
+          amount: amt,
+          category: parsed.category || 'Belanja & Kebutuhan',
+          account: parsed.account || 'Uang Tunai (Dompet)',
+          to_account: parsed.to_account || undefined,
+          date: parsed.date || new Date().toISOString().split('T')[0],
+          note: (parsed.note || inputFallback || 'Struk Belanja').replace(/^[:\-\s]+/, '').trim(),
+          confidence: 0.98,
+          raw_text: content,
+        };
+      }
+    } catch {}
+  }
+
+  // 2. Fallback: Parse markdown table or text response
+  let amount = 0;
+  const totalMatches = [
+    /(?:total\s*(?:nominal\s*transaksi|akhir|belanja|pembayaran)?|subtotal|grand\s*total|bayar)[^\d\n]*?(?:rp\.?|idr)?\s*([\d\.]+)/i,
+    /(?:rp\.?|idr)\s*([\d]{1,3}(?:\.[\d]{3})+)/i,
+    /(\d{1,3}(?:\.\d{3}){2,})/i,
+  ];
+
+  for (const regex of totalMatches) {
+    const match = content.match(regex);
+    if (match && match[1]) {
+      const num = parseInt(match[1].replace(/\./g, ''), 10);
+      if (num > 0) {
+        amount = num;
+        break;
+      }
+    }
+  }
+
+  // Extract Store/Merchant Name
+  let note = '';
+  const storeMatch = content.match(/(?:toko|nama toko|merchant|restoran|outlet)[^\w\n]*?([^\n\*\#\_\,\.]+)/i);
+  if (storeMatch && storeMatch[1]) {
+    note = storeMatch[1].trim().replace(/^[:\-\s]+/, '');
+  } else {
+    const firstLine = content.split('\n').find(l => l.trim().length > 3 && !l.startsWith('Berikut') && !l.startsWith('#') && !l.startsWith('**Informasi'));
+    if (firstLine) {
+      note = firstLine.replace(/[\*\#\_\:\-]/g, '').trim().slice(0, 50);
+    }
+  }
+  if (!note) note = inputFallback || 'Struk Belanja';
+
+  // Extract Date
+  let date = new Date().toISOString().split('T')[0];
+  const dateMatch1 = content.match(/(\d{2})[.\/-](\d{2})[.\/-](\d{4})/);
+  const dateMatch2 = content.match(/(\d{4})[.\/-](\d{2})[.\/-](\d{2})/);
+  if (dateMatch1) {
+    date = `${dateMatch1[3]}-${dateMatch1[2]}-${dateMatch1[1]}`;
+  } else if (dateMatch2) {
+    date = `${dateMatch2[1]}-${dateMatch2[2]}-${dateMatch2[3]}`;
+  }
+
+  // Detect Category
+  let category = 'Belanja & Kebutuhan';
+  const lower = content.toLowerCase();
+  if (lower.includes('kopi') || lower.includes('resto') || lower.includes('makan') || lower.includes('cafe') || lower.includes('mie') || lower.includes('ayam')) {
+    category = 'Makanan & Minuman';
+  } else if (lower.includes('spbu') || lower.includes('bensin') || lower.includes('pertamax') || lower.includes('ojol') || lower.includes('grab') || lower.includes('gojek')) {
+    category = 'Transportasi & Bensin';
+  } else if (lower.includes('pln') || lower.includes('listrik') || lower.includes('wifi') || lower.includes('pulsa')) {
+    category = 'Tagihan, Listrik & Wifi';
+  } else if (lower.includes('obat') || lower.includes('apotek') || lower.includes('klinik') || lower.includes('dokter')) {
+    category = 'Kesehatan & Obat';
+  }
+
+  return {
+    type: 'expense' as const,
+    amount: amount || 0,
+    category,
+    account: 'Uang Tunai (Dompet)',
+    to_account: undefined,
+    date,
+    note,
+    confidence: amount > 0 ? 0.95 : 0.5,
+    raw_text: content,
+  };
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -34,7 +134,7 @@ export async function POST(req: NextRequest) {
         role: 'user',
         content: imageBase64
           ? [
-              { type: 'text', text: `Ekstrak total nominal dan rincian transaksi dari struk belanja ini. Input: ${input || ''}` },
+              { type: 'text', text: `Ekstrak total nominal belanja dan nama toko dari struk ini. Kembalikan HANYA JSON: {"type": "expense", "amount": 0, "category": "Belanja & Kebutuhan", "note": "Nama Toko", "date": "YYYY-MM-DD"}. Catatan user: ${input || ''}` },
               { type: 'image_url', image_url: { url: imageBase64 } },
             ]
           : `Catat transaksi keuangan ini ke format JSON: "${input}"`,
@@ -52,8 +152,7 @@ export async function POST(req: NextRequest) {
         messages,
         temperature: 0.1,
       }),
-      // 30s timeout
-      signal: AbortSignal.timeout(30000),
+      signal: AbortSignal.timeout(45000),
     });
 
     if (!response.ok) {
@@ -61,30 +160,38 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `AI Router Error (${response.status}): ${errText}` }, { status: response.status });
     }
 
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content || data.choices?.[0]?.text || '';
-    
-    // Parse JSON
-    const jsonMatch = content.match(/\{[\s\S]*?\}/);
-    if (!jsonMatch) {
-      return NextResponse.json({ error: 'AI tidak menghasilkan JSON terstruktur', raw: content }, { status: 422 });
+    const rawText = await response.text();
+    let content = '';
+
+    // Handle SSE streams (data: {...}) or direct JSON
+    if (rawText.includes('data:')) {
+      const lines = rawText.split('\n');
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed.startsWith('data:') && !trimmed.includes('[DONE]')) {
+          try {
+            const jsonStr = trimmed.replace(/^data:\s*/, '');
+            const chunk = JSON.parse(jsonStr);
+            const delta = chunk.choices?.[0]?.delta?.content || chunk.choices?.[0]?.message?.content || '';
+            content += delta;
+          } catch {}
+        }
+      }
+    } else {
+      try {
+        const data = JSON.parse(rawText);
+        content = data.choices?.[0]?.message?.content || data.choices?.[0]?.text || '';
+      } catch {
+        content = rawText;
+      }
     }
 
-    const parsed = JSON.parse(jsonMatch[0]);
-    return NextResponse.json({
-      type: parsed.type || 'expense',
-      amount: Number(parsed.amount) || 0,
-      category: parsed.category || 'Pengeluaran Lainnya',
-      account: parsed.account || 'Uang Tunai (Dompet)',
-      to_account: parsed.to_account || undefined,
-      date: parsed.date || new Date().toISOString().split('T')[0],
-      note: parsed.note || input || 'Struk Belanja',
-      confidence: 0.98,
-      raw_text: input || 'Scan Struk AI',
-    });
+    const result = extractTransaction(content, input);
+    return NextResponse.json(result);
   } catch (err: unknown) {
     console.error('API /api/parse-ai error:', err);
     const msg = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
+

@@ -93,7 +93,7 @@ export default function SuperAdminMemberManager() {
               </span>
             </div>
             <p className="text-sm text-slate-400">
-              Kelola status akun member PRO / FREE. Member yang request upgrade lewat Instagram dapat langsung diaktivasi di sini.
+              Kelola status akun member PRO (Rp 5.000 / 1 Tahun) & FREE. Member yang request upgrade lewat Instagram (@naufal_irfansyah) dapat langsung diaktivasi di sini.
             </p>
           </div>
         </div>
@@ -127,7 +127,7 @@ export default function SuperAdminMemberManager() {
           </div>
           <div>
             <div className="text-2xl font-bold text-amber-400">{proMembers}</div>
-            <div className="text-xs text-amber-300/80 font-medium">Member Aktif PRO ⭐</div>
+            <div className="text-xs text-amber-300/80 font-medium">Member PRO (Rp 5rb/thn) ⭐</div>
           </div>
         </div>
 
@@ -144,10 +144,15 @@ export default function SuperAdminMemberManager() {
 
       {/* Quick Add / Update Member Form */}
       <div className="bg-slate-800/50 border border-slate-700/70 rounded-xl p-4 mb-6 relative z-10">
-        <h3 className="text-sm font-semibold text-slate-200 mb-3 flex items-center gap-2">
-          <Plus className="w-4 h-4 text-emerald-400" />
-          Tambah atau Perbarui Status Member
-        </h3>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold text-slate-200 flex items-center gap-2">
+            <Plus className="w-4 h-4 text-emerald-400" />
+            Tambah atau Perbarui Status Member
+          </h3>
+          <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30">
+            Tarif PRO: Rp 5.000 / 1 Tahun
+          </span>
+        </div>
 
         {successMsg && (
           <div className="mb-3 p-3 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs flex items-center gap-2">
@@ -186,7 +191,7 @@ export default function SuperAdminMemberManager() {
               onChange={(e) => setSelectedPlan(e.target.value as UserPlan)}
               className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500"
             >
-              <option value="pro">PRO (⭐ Full)</option>
+              <option value="pro">PRO (⭐ Rp 5.000 / 1 Thn)</option>
               <option value="free">FREE (Standar)</option>
             </select>
           </div>

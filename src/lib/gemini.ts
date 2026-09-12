@@ -439,16 +439,31 @@ async function callCustomEndpoint(
   }
 }
 
-export async function testAiConnection(config: AiConfig): Promise<{ success: boolean; message: string; latencyMs: number }> {
+export async function testAiConnection(config: AiConfig): Promise<{ 
+  success: boolean; 
+  message: string; 
+  latencyMs: number;
+  usedModel?: string;
+  isFallback?: boolean;
+}> {
   const start = performance.now();
   try {
     const result = await parseTransactionWithAI('Beli kopi 25rb bayar cash', config);
     const latencyMs = Math.round(performance.now() - start);
     if (result && typeof result.amount === 'number' && result.amount > 0) {
+      const usedModel = ((result as Record<string, unknown>)._usedModel as string) || config.customModel;
+      const isFallback = Boolean((result as Record<string, unknown>)._isFallback);
+
+      const statusTag = isFallback
+        ? `[Dialihkan ke Cadangan: ${usedModel}]`
+        : `[Model: ${usedModel}]`;
+
       return {
         success: true,
-        message: `Koneksi berhasil! Respon didapat dalam ${latencyMs}ms (Deteksi: Rp ${result.amount.toLocaleString('id-ID')} untuk ${result.note})`,
+        message: `Koneksi berhasil ${statusTag}! Respon dalam ${latencyMs}ms (Deteksi: Rp ${result.amount.toLocaleString('id-ID')} untuk ${result.note})`,
         latencyMs,
+        usedModel,
+        isFallback,
       };
     }
     return {

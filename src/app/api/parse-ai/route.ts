@@ -295,21 +295,6 @@ export async function POST(req: NextRequest) {
       },
     ];
 
-    let response = await fetch(cleanEndpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        model,
-        messages,
-        temperature: 0.1,
-        stream: false,
-      }),
-      signal: AbortSignal.timeout(45000),
-    });
-
     // Siapkan daftar model fallback (bisa dipisah koma), default cadangan terakhir adalah 'jaa'
     const fallbackList = (config?.customFallbackModel || process.env.NEXT_PUBLIC_AI_FALLBACK_MODEL || 'jaa')
       .split(',')
@@ -319,76 +304,97 @@ export async function POST(req: NextRequest) {
       fallbackList.push('jaa');
     }
 
-    // Auto-fallback: Jika model utama error/down (404/500/dll), coba berurutan ke daftar fallback
-    if (!response.ok && fallbackList.length > 0) {
-      for (const fbModel of fallbackList) {
-        try {
-          const fallbackRes = await fetch(cleanEndpoint, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              model: fbModel,
-              messages,
-              temperature: 0.1,
-              stream: false,
-            }),
-            signal: AbortSignal.timeout(30000),
-          });
-          if (fallbackRes.ok) {
-            response = fallbackRes;
-            break;
-          }
-        } catch {}
-      }
-    }
+    // Urutan model yang dicoba: [Model Utama, ...Daftar Fallback]
+    const modelsToTry = [model, ...fallbackList];
+    let finalResult: ReturnType<typeof extractTransaction> | null = null;
+    let successfulModel = model;
+    let lastError = '';
 
-    if (!response.ok) {
-      const errText = await response.text();
-      return NextResponse.json({ error: `AI Router Error (${response.status}): ${errText}` }, { status: response.status });
-    }
-
-    const rawText = await response.text();
-    let content = '';
-
-    // Handle SSE streams (data: {...}) or direct JSON
-    if (rawText.includes('data:')) {
-      const lines = rawText.split('\n');
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (trimmed.startsWith('data:') && !trimmed.includes('[DONE]')) {
-          try {
-            const jsonStr = trimmed.replace(/^data:\s*/, '');
-            const chunk = JSON.parse(jsonStr);
-            const delta =
-              chunk.choices?.[0]?.delta?.content ||
-              chunk.choices?.[0]?.delta?.reasoning_content ||
-              chunk.choices?.[0]?.message?.content ||
-              chunk.choices?.[0]?.message?.reasoning_content ||
-              chunk.choices?.[0]?.text ||
-              '';
-            content += delta;
-          } catch {}
-        }
-      }
-    } else {
+    for (const currentModel of modelsToTry) {
       try {
-        const data = JSON.parse(rawText);
-        content =
-          data.choices?.[0]?.message?.content ||
-          data.choices?.[0]?.message?.reasoning_content ||
-          data.choices?.[0]?.message?.reasoning ||
-          data.choices?.[0]?.text ||
-          '';
-      } catch {
-        content = rawText;
+        const response = await fetch(cleanEndpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            model: currentModel,
+            messages,
+            temperature: 0.1,
+            stream: false,
+          }),
+          signal: AbortSignal.timeout(30000),
+        });
+
+        if (!response.ok) {
+          const errText = await response.text();
+          lastError = `Model ${currentModel} (${response.status}): ${errText}`;
+          continue;
+        }
+
+        const rawText = await response.text();
+        let content = '';
+
+        // Handle SSE streams (data: {...}) or direct JSON
+        if (rawText.includes('data:')) {
+          const lines = rawText.split('\n');
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (trimmed.startsWith('data:') && !trimmed.includes('[DONE]')) {
+              try {
+                const jsonStr = trimmed.replace(/^data:\s*/, '');
+                const chunk = JSON.parse(jsonStr);
+                const delta =
+                  chunk.choices?.[0]?.delta?.content ||
+                  chunk.choices?.[0]?.delta?.reasoning_content ||
+                  chunk.choices?.[0]?.message?.content ||
+                  chunk.choices?.[0]?.message?.reasoning_content ||
+                  chunk.choices?.[0]?.text ||
+                  '';
+                content += delta;
+              } catch {}
+            }
+          }
+        } else {
+          try {
+            const data = JSON.parse(rawText);
+            content =
+              data.choices?.[0]?.message?.content ||
+              data.choices?.[0]?.message?.reasoning_content ||
+              data.choices?.[0]?.message?.reasoning ||
+              data.choices?.[0]?.text ||
+              '';
+          } catch {
+            content = rawText;
+          }
+        }
+
+        const res = extractTransaction(content, input);
+        if (res && res.amount > 0) {
+          finalResult = res;
+          successfulModel = currentModel;
+          break; // Sukses mendapatkan nominal yang valid!
+        } else {
+          lastError = `Model ${currentModel} tidak menghasilkan nominal yang sesuai.`;
+        }
+      } catch (err: unknown) {
+        lastError = `Model ${currentModel}: ${err instanceof Error ? err.message : String(err)}`;
       }
     }
 
-    const result = extractTransaction(content, input);
-    return NextResponse.json(result);
+    if (finalResult && finalResult.amount > 0) {
+      return NextResponse.json({
+        ...finalResult,
+        _usedModel: successfulModel,
+        _isFallback: successfulModel !== model,
+      });
+    }
+
+    return NextResponse.json(
+      { error: lastError || 'Semua model (utama & cadangan) gagal merespon dengan format yang sesuai.' },
+      { status: 500 }
+    );
   } catch (err: unknown) {
     console.error('API /api/parse-ai error:', err);
     const msg = err instanceof Error ? err.message : String(err);

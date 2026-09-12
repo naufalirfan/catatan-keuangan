@@ -22,7 +22,13 @@ import {
   Cloud,
   CheckCircle2,
   Server,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Activity,
+  Search,
+  Plus,
+  ListFilter,
+  X,
+  Loader2
 } from 'lucide-react';
 import SuperAdminMemberManager from '@/components/SuperAdminMemberManager';
 
@@ -71,6 +77,90 @@ export default function PengaturanPage() {
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
+  // Model status checker state
+  const [modelStatuses, setModelStatuses] = useState<
+    Record<string, { model: string; status: 'online' | 'offline' | 'warning'; latencyMs?: number; message: string }>
+  >({});
+  const [isCheckingModels, setIsCheckingModels] = useState(false);
+
+  // Available models list state from server
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [isLoadingAvailable, setIsLoadingAvailable] = useState(false);
+  const [showModelPicker, setShowModelPicker] = useState(false);
+  const [modelSearchQuery, setModelSearchQuery] = useState('');
+
+  const checkModelsHealth = async () => {
+    setIsCheckingModels(true);
+    const modelsToCheck = [
+      customModel.trim(),
+      ...customFallbackModel.split(',').map((m) => m.trim()).filter(Boolean),
+    ].filter((val, idx, arr) => val && arr.indexOf(val) === idx);
+
+    if (modelsToCheck.length === 0) {
+      setIsCheckingModels(false);
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/ai-models', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'check-models-status',
+          endpoint: customEndpoint.trim(),
+          token: customAuthToken.trim(),
+          models: modelsToCheck,
+        }),
+      });
+      const data = await res.json();
+      if (Array.isArray(data.results)) {
+        const map: Record<string, { model: string; status: 'online' | 'offline' | 'warning'; latencyMs?: number; message: string }> = {};
+        data.results.forEach((r: { model: string; status: 'online' | 'offline' | 'warning'; latencyMs?: number; message: string }) => {
+          map[r.model] = r;
+        });
+        setModelStatuses(map);
+      }
+    } catch {}
+    setIsCheckingModels(false);
+  };
+
+  const fetchAvailableModels = async () => {
+    setIsLoadingAvailable(true);
+    try {
+      const res = await fetch('/api/ai-models', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'fetch-available-models',
+          endpoint: customEndpoint.trim(),
+          token: customAuthToken.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (Array.isArray(data.models) && data.models.length > 0) {
+        setAvailableModels(data.models);
+        setShowModelPicker(true);
+      } else {
+        alert(data.error || 'Tidak ditemukan model atau endpoint tidak merespons.');
+      }
+    } catch {
+      alert('Gagal menghubungi endpoint untuk mengambil daftar model.');
+    }
+    setIsLoadingAvailable(false);
+  };
+
+  const handleSelectAsPrimary = (modelName: string) => {
+    setCustomModel(modelName);
+  };
+
+  const handleAddAsFallback = (modelName: string) => {
+    const current = customFallbackModel.split(',').map((m) => m.trim()).filter(Boolean);
+    if (!current.includes(modelName)) {
+      current.push(modelName);
+      setCustomFallbackModel(current.join(', '));
+    }
+  };
+
   const handleSaveAiSettings = () => {
     updateAiConfig({
       provider,
@@ -99,7 +189,12 @@ export default function PengaturanPage() {
       customFallbackModel: customFallbackModel.trim(),
     };
 
-    const res = await testAiConnection(tempConfig);
+    // Jalankan test AI sekaligus cek status kesehatan model
+    const [res] = await Promise.all([
+      testAiConnection(tempConfig),
+      checkModelsHealth(),
+    ]);
+
     setTestResult(res);
     setIsTesting(false);
   };
@@ -339,10 +434,26 @@ export default function PengaturanPage() {
               </div>
             </div>
 
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                Custom Model Identifier (Model Utama)
-              </label>
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  Custom Model Identifier (Model Utama)
+                </label>
+                {/* Status Badge Model Utama */}
+                {modelStatuses[customModel.trim()] && (
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold ${
+                    modelStatuses[customModel.trim()].status === 'online'
+                      ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800'
+                      : 'bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800'
+                  }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${
+                      modelStatuses[customModel.trim()].status === 'online' ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'
+                    }`} />
+                    {modelStatuses[customModel.trim()].status === 'online' ? '🟢 Online' : '🔴 Mati/Offline'}
+                    {modelStatuses[customModel.trim()].latencyMs ? ` (${modelStatuses[customModel.trim()].latencyMs}ms)` : ''}
+                  </span>
+                )}
+              </div>
               <input
                 type="text"
                 value={customModel}
@@ -350,15 +461,20 @@ export default function PengaturanPage() {
                 placeholder="Contoh: joo, gpt-4o-mini, deepseek-chat"
                 className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white"
               />
+              {modelStatuses[customModel.trim()]?.status === 'offline' && (
+                <p className="text-[10px] text-rose-500 font-medium">
+                  ⚠️ {modelStatuses[customModel.trim()].message}
+                </p>
+              )}
             </div>
 
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1">
                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
                   Fallback Models (Cadangan Otomatis)
                 </label>
-                <span className="text-[10px] text-slate-400">Bisa lebih dari satu (pisahkan koma)</span>
+                <span className="text-[10px] text-slate-400">Pisahkan dengan koma</span>
               </div>
               <input
                 type="text"
@@ -367,10 +483,137 @@ export default function PengaturanPage() {
                 placeholder="Contoh: jaa, af/google/gemini-2.5-flash"
                 className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
-              <p className="text-[10px] text-slate-400">
-                Jika model utama error, offline, atau sibuk, sistem otomatis mencoba model cadangan ini secara berurutan.
-              </p>
+
+              {/* Status List untuk Model Fallback */}
+              <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                {customFallbackModel
+                  .split(',')
+                  .map((m) => m.trim())
+                  .filter(Boolean)
+                  .map((m) => {
+                    const st = modelStatuses[m];
+                    return (
+                      <span
+                        key={m}
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono border transition-all ${
+                          !st
+                            ? 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
+                            : st.status === 'online'
+                            ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
+                            : 'bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-800'
+                        }`}
+                      >
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full ${
+                            !st ? 'bg-slate-400' : st.status === 'online' ? 'bg-emerald-500' : 'bg-rose-500'
+                          }`}
+                        />
+                        <span>{m}</span>
+                        {st && (
+                          <span className="text-[9px] opacity-85 font-sans font-bold">
+                            {st.status === 'online' ? `✓ ${st.latencyMs}ms` : `✕ ${st.message}`}
+                          </span>
+                        )}
+                      </span>
+                    );
+                  })}
+              </div>
             </div>
+
+            {/* Quick Actions: Cek Status & Buka Katalog Model */}
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                type="button"
+                onClick={checkModelsHealth}
+                disabled={isCheckingModels}
+                className="flex-1 px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 text-[11px] font-semibold text-slate-700 dark:text-slate-300 transition-colors flex items-center justify-center gap-1.5 border border-slate-200 dark:border-slate-700 disabled:opacity-60"
+              >
+                {isCheckingModels ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-500" />
+                ) : (
+                  <Activity className="w-3.5 h-3.5 text-emerald-500" />
+                )}
+                <span>{isCheckingModels ? 'Mengecek...' : '⚡ Cek Status Hidup/Mati'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={fetchAvailableModels}
+                disabled={isLoadingAvailable}
+                className="flex-1 px-3 py-2 rounded-xl bg-cyan-50 dark:bg-cyan-950/40 hover:bg-cyan-100 dark:hover:bg-cyan-900/50 text-[11px] font-semibold text-cyan-700 dark:text-cyan-300 transition-colors flex items-center justify-center gap-1.5 border border-cyan-200 dark:border-cyan-800 disabled:opacity-60"
+              >
+                {isLoadingAvailable ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-500" />
+                ) : (
+                  <ListFilter className="w-3.5 h-3.5 text-cyan-500" />
+                )}
+                <span>{isLoadingAvailable ? 'Mengambil...' : '📋 Pilih Model Server'}</span>
+              </button>
+            </div>
+
+            {/* Katalog Model yang Tersedia di Server */}
+            {showModelPicker && (
+              <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/90 border border-cyan-200 dark:border-cyan-800/60 space-y-2.5 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-cyan-500" />
+                    <span className="text-xs font-bold text-slate-900 dark:text-white">
+                      Model Tersedia di Server ({availableModels.length})
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowModelPicker(false)}
+                    className="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    value={modelSearchQuery}
+                    onChange={(e) => setModelSearchQuery(e.target.value)}
+                    placeholder="Ketik untuk filter (misal: gemini, claude, flash, kilo)..."
+                    className="w-full pl-8 pr-3 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                  />
+                </div>
+
+                <div className="max-h-44 overflow-y-auto space-y-1 pr-1">
+                  {availableModels
+                    .filter((m) => m.toLowerCase().includes(modelSearchQuery.toLowerCase()))
+                    .slice(0, 60)
+                    .map((m) => (
+                      <div
+                        key={m}
+                        className="p-1.5 rounded-lg bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-between gap-2 text-xs hover:border-cyan-300 dark:hover:border-cyan-700 transition-colors"
+                      >
+                        <span className="font-mono text-[11px] truncate text-slate-800 dark:text-slate-200" title={m}>
+                          {m}
+                        </span>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => handleSelectAsPrimary(m)}
+                            className="px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/80 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 border border-emerald-200 dark:border-emerald-800"
+                          >
+                            Utama
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleAddAsFallback(m)}
+                            className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[10px] font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 border border-slate-200 dark:border-slate-700"
+                          >
+                            + Fallback
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

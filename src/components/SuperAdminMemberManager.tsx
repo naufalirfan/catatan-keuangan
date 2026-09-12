@@ -93,7 +93,7 @@ export default function SuperAdminMemberManager() {
               </span>
             </div>
             <p className="text-sm text-slate-400">
-              Kelola status akun member PRO (Rp 5.000 / 1 Tahun) & FREE. Member yang request upgrade lewat Instagram (@naufal_irfansyah) dapat langsung diaktivasi di sini.
+              Kelola status akun member PRO (5000/th) & FREE. Member yang request upgrade lewat Instagram (@naufal_irfansyah) dapat langsung diaktivasi di sini.
             </p>
           </div>
         </div>
@@ -127,7 +127,7 @@ export default function SuperAdminMemberManager() {
           </div>
           <div>
             <div className="text-2xl font-bold text-amber-400">{proMembers}</div>
-            <div className="text-xs text-amber-300/80 font-medium">Member PRO (Rp 5rb/thn) ⭐</div>
+            <div className="text-xs text-amber-300/80 font-medium">Member PRO (5000/th) ⭐</div>
           </div>
         </div>
 
@@ -150,7 +150,7 @@ export default function SuperAdminMemberManager() {
             Tambah atau Perbarui Status Member
           </h3>
           <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30">
-            Tarif PRO: Rp 5.000 / 1 Tahun
+            Tarif PRO: 5000/th
           </span>
         </div>
 
@@ -191,7 +191,7 @@ export default function SuperAdminMemberManager() {
               onChange={(e) => setSelectedPlan(e.target.value as UserPlan)}
               className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500"
             >
-              <option value="pro">PRO (⭐ Rp 5.000 / 1 Thn)</option>
+              <option value="pro">PRO (⭐ 5000/th)</option>
               <option value="free">FREE (Standar)</option>
             </select>
           </div>

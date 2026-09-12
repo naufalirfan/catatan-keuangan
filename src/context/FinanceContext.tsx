@@ -18,8 +18,10 @@ import {
 } from '@/lib/initialData';
 import { parseGoogleJwt } from '@/lib/googleAuth';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { getUserSession, saveUserSession, clearUserSession } from '@/lib/cookies';
 
 const SUPERADMIN_EMAIL = 'naufalfaster@gmail.com';
+
 
 interface FinanceContextType {
   // Auth state
@@ -106,9 +108,20 @@ const DEFAULT_AI_CONFIG: AiConfig = {
 
 
 export function FinanceProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<UserProfile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<UserProfile | null>(() => {
+    if (typeof window !== 'undefined') {
+      return getUserSession();
+    }
+    return null;
+  });
+  const [isLoading, setIsLoading] = useState(() => {
+    if (typeof window !== 'undefined' && getUserSession()) {
+      return false;
+    }
+    return true;
+  });
   const [showPlanModal, setShowPlanModal] = useState(false);
+
 
   // Core Data (strictly scoped per user ID)
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -221,14 +234,22 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       } catch {}
     }
 
-    // Load Active User from LocalStorage if already signed in
+    // Priority 1: Check Cookie Session & LocalStorage for instant login
+    const cookieUser = getUserSession();
     const savedUser = localStorage.getItem(STORAGE_KEYS.USER);
-    if (savedUser) {
+    let activeUser: UserProfile | null = cookieUser;
+
+    if (!activeUser && savedUser) {
       try {
-        const u = JSON.parse(savedUser);
-        setUser(u);
-        loadScopedData(u);
+        activeUser = JSON.parse(savedUser);
       } catch {}
+    }
+
+    if (activeUser) {
+      setUser(activeUser);
+      saveUserSession(activeUser); // Refresh 90-day cookie
+      loadScopedData(activeUser);
+      setIsLoading(false);
     }
 
     // Listen to Supabase OAuth Session
@@ -248,6 +269,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
           };
           setUser(loggedUser);
           localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(loggedUser));
+          saveUserSession(loggedUser); // 90-day persistent cookie
           loadScopedData(loggedUser);
         }
         setIsLoading(false);
@@ -268,13 +290,16 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
           };
           setUser(loggedUser);
           localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(loggedUser));
+          saveUserSession(loggedUser); // 90-day persistent cookie
           loadScopedData(loggedUser);
           setShowPlanModal(true);
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
           localStorage.removeItem(STORAGE_KEYS.USER);
+          clearUserSession();
         }
       });
+
 
       return () => {
         authListener.subscription.unsubscribe();
@@ -349,6 +374,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     setUser(loggedUser);
     if (typeof window !== 'undefined') {
       localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(loggedUser));
+      saveUserSession(loggedUser);
     }
     loadScopedData(loggedUser);
     
@@ -369,6 +395,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     setUser(demoUser);
     if (typeof window !== 'undefined') {
       localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(demoUser));
+      saveUserSession(demoUser);
     }
     loadScopedData(demoUser);
     setShowPlanModal(true);
@@ -386,6 +413,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     setUser(adminUser);
     if (typeof window !== 'undefined') {
       localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(adminUser));
+      saveUserSession(adminUser);
     }
     loadScopedData(adminUser);
     setShowPlanModal(true);
@@ -397,11 +425,13 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     setAccounts([]);
     if (typeof window !== 'undefined') {
       localStorage.removeItem(STORAGE_KEYS.USER);
+      clearUserSession();
     }
     if (isSupabaseConfigured && supabase) {
       await supabase.auth.signOut().catch(() => {});
     }
   }, []);
+
 
   // Transaction CRUD
   const addTransaction = async (txData: Omit<Transaction, 'id' | 'created_at' | 'user_id'>): Promise<Transaction> => {

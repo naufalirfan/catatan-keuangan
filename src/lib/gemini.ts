@@ -96,16 +96,16 @@ export function parseTransactionLocally(text: string): ParsedAiTransaction {
     .replace(/(?:rp\.?|idr)?\s*\d+(?:[.,]\d+)?\s*(?:jt|juta|k|rb|ribu)?/gi, '')
     .replace(/(?:pake|pakai|via|dari|ke|masuk)?\s*(?:bca|mandiri|gopay|ovo|shopeepay|dana|cash|tunai)/gi, '')
     .trim();
-  if (!note) note = text;
+  if (!note) note = text || 'Transaksi Manual';
 
   return {
     type,
-    amount: amount || 25000,
+    amount: amount || 0,
     category,
     account,
     date: today,
     note: note.slice(0, 50),
-    confidence: 0.85,
+    confidence: amount > 0 ? 0.85 : 0.4,
     raw_text: text,
   };
 }
@@ -115,14 +115,25 @@ export async function parseTransactionWithAI(
   config: AiConfig,
   imageBase64?: string
 ): Promise<ParsedAiTransaction> {
-  // If no API key / endpoint configured, gracefully use smart regex parser
-  if (config.provider === 'gemini' && !config.geminiApiKey) {
-    return parseTransactionLocally(input);
-  }
-  if (config.provider === 'custom' && !config.customEndpoint) {
-    return parseTransactionLocally(input);
+  // 1. Try our Next.js Server API route first (eliminates browser CORS issues completely)
+  try {
+    const res = await fetch('/api/parse-ai', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ input, imageBase64, config }),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data && typeof data.amount === 'number' && data.amount > 0) {
+        return data;
+      }
+    }
+  } catch (serverErr) {
+    console.warn('Server API route /api/parse-ai failed, trying direct provider:', serverErr);
   }
 
+  // 2. Direct provider call as backup
   try {
     if (config.provider === 'gemini') {
       return await callGeminiApi(input, config, imageBase64);
@@ -130,7 +141,10 @@ export async function parseTransactionWithAI(
       return await callCustomEndpoint(input, config, imageBase64);
     }
   } catch (error) {
-    console.warn('Gagal memanggil API AI, menggunakan fallback parser lokal:', error);
+    console.warn('Gagal memanggil API AI:', error);
+    if (imageBase64) {
+      throw new Error('Gagal mengekstrak struk dengan AI. Pastikan foto struk terlihat jelas atau masukkan nominal secara manual.');
+    }
     const fallback = parseTransactionLocally(input);
     fallback.note = `${fallback.note} (offline parsed)`;
     return fallback;
@@ -227,8 +241,9 @@ async function callCustomEndpoint(
     'Content-Type': 'application/json',
   };
 
-  if (config.customAuthToken) {
-    headers['Authorization'] = `Bearer ${config.customAuthToken.trim()}`;
+  const authToken = config.customAuthToken?.trim() || 'sk-f7dc96564905d265-i8kpea-767a0d95';
+  if (authToken) {
+    headers['Authorization'] = `Bearer ${authToken}`;
   }
 
   const messages = [

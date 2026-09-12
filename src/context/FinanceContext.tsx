@@ -9,8 +9,10 @@ import {
   AiConfig, 
   UserProfile, 
   TransactionType,
-  UserPlan 
+  UserPlan,
+  MemberItem
 } from '@/types/finance';
+
 import { 
   DEFAULT_ACCOUNTS, 
   DEFAULT_CATEGORIES, 
@@ -83,6 +85,11 @@ interface FinanceContextType {
   exportToJson: () => void;
   importFromJson: (jsonData: string) => boolean;
   resetToDefault: () => void;
+
+  // Member Management (Superadmin)
+  members: MemberItem[];
+  updateMemberPlan: (email: string, plan: UserPlan, name?: string) => Promise<void>;
+  deleteMember: (email: string) => Promise<void>;
 }
 
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
@@ -95,7 +102,9 @@ const STORAGE_KEYS = {
   CATEGORIES: (uid: string) => `catatankeuangan_cat_${uid}`,
   BUDGETS: (uid: string) => `catatankeuangan_budgets_${uid}`,
   AI_CONFIG: 'catatankeuangan_ai_config',
+  MEMBERS: 'catatankeuangan_members_registry',
 };
+
 
 const DEFAULT_AI_CONFIG: AiConfig = {
   provider: 'custom',
@@ -121,6 +130,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     return true;
   });
   const [showPlanModal, setShowPlanModal] = useState(false);
+  const [members, setMembers] = useState<MemberItem[]>([]);
 
 
   // Core Data (strictly scoped per user ID)
@@ -154,13 +164,32 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     if (typeof window === 'undefined') return;
     const uid = activeUser.id;
 
-    // Load Plan
+    // Load Plan from member registry or saved plan
+    const registryRaw = localStorage.getItem(STORAGE_KEYS.MEMBERS);
+    const registry = registryRaw ? JSON.parse(registryRaw) : {};
+    const memberEntry = registry[activeUser.email.toLowerCase()];
+
     const savedPlan = localStorage.getItem(STORAGE_KEYS.PLAN(uid)) as UserPlan | null;
     const resolvedPlan: UserPlan = activeUser.email.toLowerCase() === SUPERADMIN_EMAIL.toLowerCase()
       ? 'pro'
-      : (savedPlan || activeUser.plan || 'free');
+      : (memberEntry?.plan || savedPlan || activeUser.plan || 'free');
     
-    setUser((prev) => (prev ? { ...prev, plan: resolvedPlan } : activeUser));
+    setUser((prev) => (prev ? { ...prev, plan: resolvedPlan } : { ...activeUser, plan: resolvedPlan }));
+
+    // Register user to member registry if not present
+    if (!registry[activeUser.email.toLowerCase()]) {
+      registry[activeUser.email.toLowerCase()] = {
+        id: activeUser.id,
+        email: activeUser.email.toLowerCase(),
+        name: activeUser.name,
+        picture: activeUser.picture || '',
+        plan: resolvedPlan,
+        created_at: new Date().toISOString(),
+      };
+      localStorage.setItem(STORAGE_KEYS.MEMBERS, JSON.stringify(registry));
+      setMembers(Object.values(registry));
+    }
+
 
     // Load Transactions
     const savedTx = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS(uid));
@@ -234,7 +263,42 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       } catch {}
     }
 
+    // Load Members Registry from LocalStorage
+    const registryRaw = localStorage.getItem(STORAGE_KEYS.MEMBERS);
+    if (registryRaw) {
+      try {
+        const parsed = JSON.parse(registryRaw);
+        setMembers(Object.values(parsed));
+      } catch {}
+    }
+
+    // Also sync members from Supabase profiles if available
+    if (isSupabaseConfigured && supabase) {
+      supabase.from('profiles').select('*').then(({ data }) => {
+        if (data && Array.isArray(data)) {
+          const currentRaw = localStorage.getItem(STORAGE_KEYS.MEMBERS);
+          const currentRegistry = currentRaw ? JSON.parse(currentRaw) : {};
+          data.forEach((p: { id?: string; email?: string; full_name?: string; name?: string; avatar_url?: string; picture?: string; plan?: string; created_at?: string }) => {
+            if (p.email) {
+              const emailKey = p.email.toLowerCase();
+              currentRegistry[emailKey] = {
+                id: p.id || `user_${emailKey.replace(/[^a-z0-9]/g, '_')}`,
+                email: emailKey,
+                name: p.full_name || p.name || emailKey.split('@')[0],
+                picture: p.avatar_url || p.picture || '',
+                plan: (p.plan as UserPlan) || currentRegistry[emailKey]?.plan || 'free',
+                created_at: p.created_at || new Date().toISOString(),
+              };
+            }
+          });
+          localStorage.setItem(STORAGE_KEYS.MEMBERS, JSON.stringify(currentRegistry));
+          setMembers(Object.values(currentRegistry));
+        }
+      }, () => {});
+    }
+
     // Priority 1: Check Cookie Session & LocalStorage for instant login
+
     const cookieUser = getUserSession();
     const savedUser = localStorage.getItem(STORAGE_KEYS.USER);
     let activeUser: UserProfile | null = cookieUser;
@@ -721,6 +785,87 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     persistAccounts(DEFAULT_ACCOUNTS);
   };
 
+  // Superadmin Member Management
+  const updateMemberPlan = useCallback(async (email: string, newPlan: UserPlan, name?: string) => {
+    const emailKey = email.trim().toLowerCase();
+    if (!emailKey) return;
+
+    let registry: Record<string, MemberItem> = {};
+    try {
+      const raw = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEYS.MEMBERS) : null;
+      if (raw) registry = JSON.parse(raw);
+    } catch {}
+
+    const existing = registry[emailKey];
+    const updatedMember: MemberItem = {
+      id: existing?.id || `user_${emailKey.replace(/[^a-z0-9]/g, '_')}`,
+      email: emailKey,
+      name: name || existing?.name || emailKey.split('@')[0],
+      picture: existing?.picture || '',
+      plan: newPlan,
+      created_at: existing?.created_at || new Date().toISOString(),
+    };
+
+    registry[emailKey] = updatedMember;
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_KEYS.MEMBERS, JSON.stringify(registry));
+      localStorage.setItem(STORAGE_KEYS.PLAN(updatedMember.id), newPlan);
+    }
+
+    if (user && user.email.toLowerCase() === emailKey) {
+      const updatedUser: UserProfile = { ...user, plan: newPlan };
+      setUser(updatedUser);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(updatedUser));
+        saveUserSession(updatedUser);
+      }
+    }
+
+    setMembers(Object.values(registry));
+
+    if (isSupabaseConfigured && supabase) {
+      try {
+        await supabase.from('profiles').upsert({
+          email: emailKey,
+          plan: newPlan,
+          full_name: updatedMember.name,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'email' });
+      } catch (err) {
+        console.warn('Could not sync member plan to Supabase:', err);
+      }
+    }
+  }, [user]);
+
+  const deleteMember = useCallback(async (email: string) => {
+    const emailKey = email.trim().toLowerCase();
+    if (!emailKey) return;
+
+    let registry: Record<string, MemberItem> = {};
+    try {
+      const raw = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEYS.MEMBERS) : null;
+      if (raw) registry = JSON.parse(raw);
+    } catch {}
+
+    if (registry[emailKey]) {
+      const memberId = registry[emailKey].id;
+      delete registry[emailKey];
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(STORAGE_KEYS.MEMBERS, JSON.stringify(registry));
+        localStorage.removeItem(STORAGE_KEYS.PLAN(memberId));
+      }
+      setMembers(Object.values(registry));
+    }
+
+    if (isSupabaseConfigured && supabase) {
+      try {
+        await supabase.from('profiles').delete().eq('email', emailKey);
+      } catch (err) {
+        console.warn('Could not delete member from Supabase:', err);
+      }
+    }
+  }, []);
+
   return (
     <FinanceContext.Provider
       value={{
@@ -772,6 +917,9 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         exportToJson,
         importFromJson,
         resetToDefault,
+        members,
+        updateMemberPlan,
+        deleteMember,
       }}
     >
       {children}

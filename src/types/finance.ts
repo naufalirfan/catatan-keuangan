@@ -78,3 +78,13 @@ export interface UserProfile {
   plan: UserPlan;
   role: 'user' | 'admin';
 }
+
+export interface MemberItem {
+  id: string;
+  email: string;
+  name: string;
+  picture?: string;
+  plan: UserPlan;
+  created_at?: string;
+}
+

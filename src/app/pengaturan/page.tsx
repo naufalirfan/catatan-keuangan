@@ -23,6 +23,7 @@ import {
   CheckCircle2,
   Server
 } from 'lucide-react';
+import SuperAdminMemberManager from '@/components/SuperAdminMemberManager';
 
 export default function PengaturanPage() {
   const { 
@@ -433,6 +434,9 @@ export default function PengaturanPage() {
           </div>
         </div>
       </div>
+
+      {/* Superadmin Member Management */}
+      {isSuperAdmin && <SuperAdminMemberManager />}
 
       {/* Backup & Restore Data Card */}
       <div className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-3">

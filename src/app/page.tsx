@@ -22,6 +22,7 @@ import {
   ShieldCheck,
   Zap
 } from 'lucide-react';
+import SuperAdminMemberManager from '@/components/SuperAdminMemberManager';
 
 export default function DashboardPage() {
   const { 
@@ -123,6 +124,9 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+
+      {/* Superadmin Member Management Panel */}
+      {isSuperAdmin && <SuperAdminMemberManager />}
 
       {/* Hero Financial Card */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700 p-6 text-white shadow-xl shadow-emerald-600/20">

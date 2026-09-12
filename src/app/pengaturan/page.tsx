@@ -669,7 +669,7 @@ export default function PengaturanPage() {
               className="w-full py-2.5 px-3 rounded-xl border border-dashed border-emerald-300 dark:border-emerald-800 hover:border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
             >
               <Plus className="w-3.5 h-3.5" />
-              + Tambah Token Gemini Cadangan (Fallback)
+              Tambah Token Gemini Cadangan (Fallback)
             </button>
 
             <div className="space-y-1">
@@ -681,10 +681,12 @@ export default function PengaturanPage() {
                 onChange={(e) => setGeminiModel(e.target.value)}
                 className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white"
               >
-                <option value="gemini-1.5-flash">Gemini 1.5 Flash (Sangat Cepat & Gratis - Rekomendasi)</option>
+                <option value="gemini-2.5-flash">Gemini 2.5 Flash (Generasi Super Cepat Terbaru - Rekomendasi)</option>
                 <option value="gemini-2.0-flash">Gemini 2.0 Flash (Generasi Terbaru)</option>
+                <option value="gemini-1.5-flash">Gemini 1.5 Flash (Sangat Cepat & Populer)</option>
                 <option value="gemini-1.5-flash-8b">Gemini 1.5 Flash 8B (Ultra Ringan)</option>
-                <option value="gemini-1.5-pro">Gemini 1.5 Pro (Akurasi Maksimal)</option>
+                <option value="gemini-2.5-pro">Gemini 2.5 Pro (Akurasi Maksimal)</option>
+                <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
               </select>
             </div>
 

@@ -230,12 +230,13 @@ async function callGeminiApi(
 
   const modelCandidates = Array.from(new Set([
     requestedModel,
-    'gemini-1.5-flash-latest',
-    'gemini-1.5-flash',
+    'gemini-2.5-flash',
     'gemini-2.0-flash',
-    'gemini-1.5-flash-002',
-    'gemini-1.5-pro-latest',
-  ]));
+    'gemini-1.5-flash',
+    'gemini-1.5-flash-8b',
+    'gemini-2.5-pro',
+    'gemini-1.5-pro',
+  ])).slice(0, 3);
 
   let rawResponse = '';
   let lastErrorMsg = '';
@@ -243,34 +244,32 @@ async function callGeminiApi(
   for (let kIdx = 0; kIdx < candidateKeys.length; kIdx++) {
     const apiKey = candidateKeys[kIdx];
     for (const cand of modelCandidates) {
-      for (const ver of ['v1', 'v1beta']) {
-        try {
-          const url = `https://generativelanguage.googleapis.com/${ver}/models/${cand}:generateContent?key=${apiKey}`;
-          const res = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(requestBody),
-          });
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${cand}:generateContent?key=${apiKey}`;
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestBody),
+          signal: AbortSignal.timeout(6000),
+        });
 
-          if (res.ok) {
-            const data = await res.json();
-            rawResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-            if (rawResponse) break;
-          } else {
-            const errText = await res.text();
-            let detail = errText;
-            try {
-              const errObj = JSON.parse(errText);
-              detail = errObj.error?.message || errText;
-            } catch {}
-            lastErrorMsg = `Token #${kIdx + 1} (${res.status}): ${detail}`;
-            if (res.status === 400 || res.status === 403) break;
-          }
-        } catch (e: unknown) {
-          lastErrorMsg = e instanceof Error ? e.message : String(e);
+        if (res.ok) {
+          const data = await res.json();
+          rawResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          if (rawResponse) break;
+        } else {
+          const errText = await res.text();
+          let detail = errText;
+          try {
+            const errObj = JSON.parse(errText);
+            detail = errObj.error?.message || errText;
+          } catch {}
+          lastErrorMsg = `Token #${kIdx + 1} (${res.status}): ${detail}`;
+          if (res.status === 400 || res.status === 401 || res.status === 403 || res.status === 429) break;
         }
+      } catch (e: unknown) {
+        lastErrorMsg = e instanceof Error ? e.message : String(e);
       }
-      if (rawResponse) break;
     }
     if (rawResponse) break;
   }

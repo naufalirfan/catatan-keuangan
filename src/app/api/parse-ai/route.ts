@@ -194,89 +194,57 @@ export async function POST(req: NextRequest) {
       for (let kIdx = 0; kIdx < candidateKeys.length; kIdx++) {
         const currentApiKey = candidateKeys[kIdx];
 
-        // 1. Check available models for this specific key
-        let availableModels: string[] = [];
-        let listModelsError = '';
+        // Priority candidate models to try: requested model first, then standard fast fallbacks
+        const modelsToTry = Array.from(new Set([
+          requestedModel,
+          'gemini-2.5-flash',
+          'gemini-2.0-flash',
+          'gemini-1.5-flash',
+          'gemini-1.5-flash-8b',
+          'gemini-2.5-pro',
+          'gemini-1.5-pro',
+        ])).slice(0, 3); // At most 3 fast candidate attempts
 
-        for (const ver of ['v1beta', 'v1']) {
+        for (const cand of modelsToTry) {
           try {
-            const listRes = await fetch(`https://generativelanguage.googleapis.com/${ver}/models?key=${currentApiKey}`, {
-              signal: AbortSignal.timeout(10000),
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${cand}:generateContent?key=${currentApiKey}`;
+            const res = await fetch(url, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(requestBody),
+              signal: AbortSignal.timeout(6000), // 6 seconds timeout per attempt
             });
-            if (listRes.ok) {
-              const listData = await listRes.json();
-              const supported = (listData.models || [])
-                .filter((m: { supportedGenerationMethods?: string[] }) => m.supportedGenerationMethods?.includes('generateContent'))
-                .map((m: { name: string }) => m.name.replace(/^models\//, ''));
-              if (supported.length > 0) {
-                availableModels = supported;
+
+            if (res.ok) {
+              const data = await res.json();
+              const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+              if (raw) {
+                geminiSuccessResponse = raw;
+                successfulGeminiModel = cand;
+                successfulKeyIndex = kIdx;
                 break;
               }
             } else {
-              const errText = await listRes.text();
+              const errText = await res.text();
               let msg = errText;
               try {
                 msg = JSON.parse(errText).error?.message || errText;
               } catch {}
-              listModelsError = `(${listRes.status}): ${msg}`;
+              lastGeminiError = `Token #${kIdx + 1} (${res.status}): ${msg}`;
+              // If token itself is invalid or quota is exceeded (400, 401, 403, 429), break model loop to try next token
+              if (res.status === 400 || res.status === 401 || res.status === 403 || res.status === 429) {
+                break;
+              }
             }
           } catch (e: unknown) {
-            listModelsError = e instanceof Error ? e.message : String(e);
+            lastGeminiError = `Token #${kIdx + 1}: ` + (e instanceof Error ? e.message : String(e));
           }
-        }
-
-        const modelsToTry = availableModels.length > 0
-          ? [
-              availableModels.includes(requestedModel) ? requestedModel : availableModels[0],
-              ...availableModels.filter((m: string) => m !== requestedModel),
-            ]
-          : [
-              requestedModel,
-              'gemini-1.5-flash',
-              'gemini-2.0-flash',
-              'gemini-1.5-flash-8b',
-              'gemini-1.5-pro',
-            ];
-
-        for (const cand of modelsToTry) {
-          for (const ver of ['v1beta', 'v1']) {
-            try {
-              const url = `https://generativelanguage.googleapis.com/${ver}/models/${cand}:generateContent?key=${currentApiKey}`;
-              const res = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(requestBody),
-                signal: AbortSignal.timeout(20000),
-              });
-
-              if (res.ok) {
-                const data = await res.json();
-                const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-                if (raw) {
-                  geminiSuccessResponse = raw;
-                  successfulGeminiModel = cand;
-                  successfulKeyIndex = kIdx;
-                  break;
-                }
-              } else {
-                const errText = await res.text();
-                let msg = errText;
-                try {
-                  msg = JSON.parse(errText).error?.message || errText;
-                } catch {}
-                lastGeminiError = `Token #${kIdx + 1} (${res.status}): ${msg}`;
-              }
-            } catch (e: unknown) {
-              lastGeminiError = `Token #${kIdx + 1}: ` + (e instanceof Error ? e.message : String(e));
-            }
-          }
-          if (geminiSuccessResponse) break;
         }
 
         // If this token succeeded, don't need to try subsequent fallback tokens!
         if (geminiSuccessResponse) break;
 
-        // If this token failed (e.g. rate limit 429 or quota exceeded), log and try next candidate key
+        // If this token failed, log and proceed to next candidate key
         console.warn(`Gemini Token #${kIdx + 1} failed: ${lastGeminiError}. Mencoba token cadangan berikutnya...`);
       }
 

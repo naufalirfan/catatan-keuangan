@@ -137,8 +137,14 @@ export async function parseTransactionWithAI(
       if (errData?.error) {
         serverErrorMessage = errData.error;
       }
+      if (config.isTest) {
+        throw new Error(errData?.error || `Server API Error (${res.status})`);
+      }
     }
   } catch (serverErr) {
+    if (config.isTest) {
+      throw serverErr;
+    }
     console.warn('Server API route /api/parse-ai failed, trying direct provider:', serverErr);
   }
 
@@ -448,16 +454,24 @@ export async function testAiConnection(config: AiConfig): Promise<{
 }> {
   const start = performance.now();
   try {
-    const result = await parseTransactionWithAI('Beli kopi 25rb bayar cash', config);
+    const isGemini = config.provider === 'gemini';
+    const result = await parseTransactionWithAI('Beli kopi 25rb bayar cash', {
+      ...config,
+      isTest: true,
+    });
     const latencyMs = Math.round(performance.now() - start);
     if (result && typeof result.amount === 'number' && result.amount > 0) {
       const rawResult = result as unknown as Record<string, unknown>;
-      const usedModel = (rawResult._usedModel as string) || config.customModel;
+      const rawProvider = (rawResult._provider as string) || (isGemini ? 'gemini' : 'custom');
+      const usedModel =
+        (rawResult._usedModel as string) ||
+        (isGemini ? config.geminiModel || 'gemini-1.5-flash' : config.customModel);
       const isFallback = Boolean(rawResult._isFallback);
 
+      const providerLabel = rawProvider === 'gemini' ? 'Google Gemini' : 'Custom Router';
       const statusTag = isFallback
-        ? `[Dialihkan ke Cadangan: ${usedModel}]`
-        : `[Model: ${usedModel}]`;
+        ? `[Cadangan: ${usedModel}]`
+        : `[${providerLabel}: ${usedModel}]`;
 
       return {
         success: true,

@@ -175,99 +175,75 @@ export async function POST(req: NextRequest) {
         },
       };
 
-      // Try different Gemini models and API versions (v1 vs v1beta)
+      // Try Gemini models on v1beta (official endpoint for Gemini 1.5 & 2.0 with system instructions)
       const modelCandidates = [
         requestedModel,
-        'gemini-1.5-flash-latest',
         'gemini-1.5-flash',
         'gemini-2.0-flash',
-        'gemini-1.5-flash-002',
-        'gemini-1.5-pro-latest',
+        'gemini-1.5-flash-latest',
+        'gemini-1.5-flash-8b',
         'gemini-1.5-pro',
       ];
-      // Filter unique candidates
       const uniqueCandidates = Array.from(new Set(modelCandidates));
 
-      let geminiSuccessResponse = null;
+      let geminiSuccessResponse: string | null = null;
+      let successfulGeminiModel = requestedModel;
       let lastGeminiError = '';
 
       for (const cand of uniqueCandidates) {
-        for (const ver of ['v1', 'v1beta']) {
-          try {
-            const url = `https://generativelanguage.googleapis.com/${ver}/models/${cand}:generateContent?key=${apiKey}`;
-            const res = await fetch(url, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(requestBody),
-              signal: AbortSignal.timeout(20000),
-            });
-
-            if (res.ok) {
-              const data = await res.json();
-              const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-              if (raw) {
-                geminiSuccessResponse = raw;
-                break;
-              }
-            } else {
-              const errText = await res.text();
-              let msg = errText;
-              try {
-                const j = JSON.parse(errText);
-                msg = j.error?.message || errText;
-              } catch {}
-              lastGeminiError = `(${res.status}): ${msg}`;
-              // If not 404 (e.g. 400 Bad Request or 403 API key invalid), don't keep trying models
-              if (res.status === 400 || res.status === 403) {
-                break;
-              }
-            }
-          } catch (e: unknown) {
-            lastGeminiError = e instanceof Error ? e.message : String(e);
-          }
-        }
-        if (geminiSuccessResponse) break;
-      }
-
-      // If still not found, query ListModels from Google to find active models for this key
-      if (!geminiSuccessResponse && !lastGeminiError.includes('API_KEY_INVALID')) {
         try {
-          for (const ver of ['v1', 'v1beta']) {
-            const listRes = await fetch(`https://generativelanguage.googleapis.com/${ver}/models?key=${apiKey}`);
-            if (listRes.ok) {
-              const listData = await listRes.json();
-              const models = (listData.models || []) as Array<{ name: string; supportedGenerationMethods?: string[] }>;
-              const supported = models.filter(m => m.supportedGenerationMethods?.includes('generateContent'));
-              for (const sm of supported) {
-                const cleanName = sm.name.replace(/^models\//, '');
-                const url = `https://generativelanguage.googleapis.com/${ver}/models/${cleanName}:generateContent?key=${apiKey}`;
-                const res = await fetch(url, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify(requestBody),
-                  signal: AbortSignal.timeout(20000),
-                });
-                if (res.ok) {
-                  const data = await res.json();
-                  const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-                  if (raw) {
-                    geminiSuccessResponse = raw;
-                    break;
-                  }
-                }
-              }
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/${cand}:generateContent?key=${apiKey}`;
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestBody),
+            signal: AbortSignal.timeout(20000),
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            if (raw) {
+              geminiSuccessResponse = raw;
+              successfulGeminiModel = cand;
+              break;
             }
-            if (geminiSuccessResponse) break;
+          } else {
+            const errText = await res.text();
+            let msg = errText;
+            try {
+              const j = JSON.parse(errText);
+              msg = j.error?.message || errText;
+            } catch {}
+            lastGeminiError = `(${res.status}): ${msg}`;
+            if (res.status === 403 || msg.includes('API_KEY_INVALID') || msg.includes('API key not valid')) {
+              break;
+            }
           }
-        } catch {}
+        } catch (e: unknown) {
+          lastGeminiError = e instanceof Error ? e.message : String(e);
+        }
       }
 
       if (geminiSuccessResponse) {
         const result = extractTransaction(geminiSuccessResponse, input);
-        return NextResponse.json(result);
+        return NextResponse.json({
+          ...result,
+          _provider: 'gemini',
+          _usedModel: successfulGeminiModel,
+          _isFallback: false,
+        });
       }
 
-      // If Gemini failed (e.g. 404 or quota), log warning and proceed to fallback router below
+      // If this is a connection test, return the Gemini error directly so user knows why it failed!
+      if (config?.isTest) {
+        return NextResponse.json(
+          { error: `Koneksi Google Gemini gagal: ${lastGeminiError || 'Model tidak merespon'}. Pastikan Gemini API Key Anda valid dan kuota mencukupi.` },
+          { status: 400 }
+        );
+      }
+
+      // If Gemini failed in production parsing, log warning and proceed to fallback router
       console.warn('Gemini failed with error:', lastGeminiError, 'Falling back to default AI Router...');
     }
 
@@ -386,8 +362,9 @@ export async function POST(req: NextRequest) {
     if (finalResult && finalResult.amount > 0) {
       return NextResponse.json({
         ...finalResult,
+        _provider: 'custom',
         _usedModel: successfulModel,
-        _isFallback: successfulModel !== model,
+        _isFallback: isGemini ? true : successfulModel !== model,
       });
     }
 

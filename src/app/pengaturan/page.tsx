@@ -176,7 +176,14 @@ export default function PengaturanPage() {
       customFallbackModel: customFallbackModel.trim(),
     });
     setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 2500);
+    setTestResult({
+      success: true,
+      message:
+        provider === 'gemini'
+          ? `Pengaturan disimpan! AI sekarang AKTIF menggunakan Google Gemini (${geminiModel || 'gemini-1.5-flash'}).`
+          : `Pengaturan disimpan! AI sekarang AKTIF menggunakan Custom Endpoint (${customModel || 'jaa'}).`,
+    });
+    setTimeout(() => setSaveSuccess(false), 3000);
   };
 
   const handleTestConnection = async () => {
@@ -313,28 +320,44 @@ export default function PengaturanPage() {
         <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-2xl text-xs font-semibold">
           <button
             type="button"
-            onClick={() => setProvider('gemini')}
-            className={`py-2 rounded-xl flex items-center justify-center gap-1.5 transition-all ${
+            onClick={() => {
+              setProvider('gemini');
+              setTestResult(null);
+            }}
+            className={`py-2 px-2 rounded-xl flex items-center justify-center gap-1.5 transition-all relative ${
               provider === 'gemini'
                 ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-sm font-bold'
                 : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
             }`}
           >
-            <Sparkles className="w-3.5 h-3.5" />
-            Google Gemini (Resmi)
+            <Sparkles className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">Google Gemini (Resmi)</span>
+            {aiConfig.provider === 'gemini' && (
+              <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 font-extrabold border border-emerald-300 dark:border-emerald-700 shrink-0">
+                Aktif
+              </span>
+            )}
           </button>
 
           <button
             type="button"
-            onClick={() => setProvider('custom')}
-            className={`py-2 rounded-xl flex items-center justify-center gap-1.5 transition-all ${
+            onClick={() => {
+              setProvider('custom');
+              setTestResult(null);
+            }}
+            className={`py-2 px-2 rounded-xl flex items-center justify-center gap-1.5 transition-all relative ${
               provider === 'custom'
                 ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-sm font-bold'
                 : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
             }`}
           >
-            <Server className="w-3.5 h-3.5" />
-            Custom Endpoint & Token
+            <Server className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">Custom Endpoint</span>
+            {aiConfig.provider === 'custom' && (
+              <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 font-extrabold border border-emerald-300 dark:border-emerald-700 shrink-0">
+                Aktif
+              </span>
+            )}
           </button>
         </div>
 

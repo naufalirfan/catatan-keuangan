@@ -6,8 +6,6 @@ import {
   Wallet, 
   Sparkles, 
   ShieldCheck, 
-  CheckCircle2, 
-  UserCheck, 
   Bot, 
   Zap, 
   ArrowRight
@@ -23,10 +21,9 @@ export default function AuthGate({ children }: AuthGateProps) {
     isLoading, 
     googleClientId, 
     signInWithGoogle,
-    loginWithGoogleCredential,
-    loginAsDemo,
-    loginAsAdmin 
+    loginWithGoogleCredential
   } = useFinance();
+
 
   // Initialize Google Identity Services if client id is present
   useEffect(() => {
@@ -191,38 +188,11 @@ export default function AuthGate({ children }: AuthGateProps) {
           {/* GIS Button container fallback */}
           <div id="google-signin-btn-container" className="flex justify-center empty:hidden" />
 
-          {/* Divider */}
-          <div className="relative flex items-center justify-center">
-            <div className="border-t border-slate-200 dark:border-slate-800 w-full" />
-            <span className="bg-white dark:bg-slate-900 px-3 text-[11px] text-slate-400 uppercase tracking-wider font-semibold">
-              atau coba instan
-            </span>
-          </div>
-
-          {/* Quick Access Buttons */}
-          <div className="grid grid-cols-2 gap-2 pt-1">
-            <button
-              onClick={loginAsAdmin}
-              className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-2xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/50 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-bold text-xs border border-emerald-200 dark:border-emerald-800/60 transition-colors"
-            >
-              <UserCheck className="w-3.5 h-3.5 text-emerald-500" />
-              Akun Admin (Naufal)
-            </button>
-
-            <button
-              onClick={loginAsDemo}
-              className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-xs transition-colors"
-            >
-              <CheckCircle2 className="w-3.5 h-3.5 text-slate-400" />
-              Mode Demo Tamu
-            </button>
-          </div>
-
-          <p className="text-[10px] text-slate-400 pt-1">
-            Data tersimpan aman di browser Anda dan tersinkron otomatis saat online.
+          <p className="text-[11px] text-slate-400 pt-1">
+            Data tersimpan aman di cloud & browser Anda, terisolasi 1 akun 1 catatan.
           </p>
-
         </div>
+
 
       </div>
     </div>

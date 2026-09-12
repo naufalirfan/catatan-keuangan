@@ -54,6 +54,7 @@ export interface AiConfig {
   customEndpoint: string;
   customAuthToken: string;
   customModel: string;
+  customFallbackModel?: string;
 }
 
 export interface ParsedAiTransaction {

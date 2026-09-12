@@ -48,7 +48,8 @@ export default function PengaturanPage() {
   const [geminiModel, setGeminiModel] = useState(aiConfig.geminiModel || 'gemini-1.5-flash');
   const [customEndpoint, setCustomEndpoint] = useState(aiConfig.customEndpoint || 'https://9router.naufalputra.my.id/v1');
   const [customAuthToken, setCustomAuthToken] = useState(aiConfig.customAuthToken || '');
-  const [customModel, setCustomModel] = useState(aiConfig.customModel || 'jaa');
+  const [customModel, setCustomModel] = useState(aiConfig.customModel || 'joo');
+  const [customFallbackModel, setCustomFallbackModel] = useState(aiConfig.customFallbackModel || 'jaa');
 
   const [showGeminiKey, setShowGeminiKey] = useState(false);
   const [showCustomToken, setShowCustomToken] = useState(false);
@@ -60,7 +61,8 @@ export default function PengaturanPage() {
     setGeminiModel(aiConfig.geminiModel || 'gemini-1.5-flash');
     setCustomEndpoint(aiConfig.customEndpoint || 'https://9router.naufalputra.my.id/v1');
     setCustomAuthToken(aiConfig.customAuthToken || '');
-    setCustomModel(aiConfig.customModel || 'jaa');
+    setCustomModel(aiConfig.customModel || 'joo');
+    setCustomFallbackModel(aiConfig.customFallbackModel || 'jaa');
   }, [aiConfig]);
 
 
@@ -77,6 +79,7 @@ export default function PengaturanPage() {
       customEndpoint: customEndpoint.trim(),
       customAuthToken: customAuthToken.trim(),
       customModel: customModel.trim(),
+      customFallbackModel: customFallbackModel.trim(),
     });
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 2500);
@@ -93,6 +96,7 @@ export default function PengaturanPage() {
       customEndpoint: customEndpoint.trim(),
       customAuthToken: customAuthToken.trim(),
       customModel: customModel.trim(),
+      customFallbackModel: customFallbackModel.trim(),
     };
 
     const res = await testAiConnection(tempConfig);
@@ -337,15 +341,35 @@ export default function PengaturanPage() {
 
             <div className="space-y-1">
               <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                Custom Model Identifier
+                Custom Model Identifier (Model Utama)
               </label>
               <input
                 type="text"
                 value={customModel}
                 onChange={(e) => setCustomModel(e.target.value)}
-                placeholder="Contoh: gpt-4o-mini, deepseek-chat, llama-3.3-70b"
+                placeholder="Contoh: joo, gpt-4o-mini, deepseek-chat"
                 className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white"
               />
+            </div>
+
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+                  Fallback Models (Cadangan Otomatis)
+                </label>
+                <span className="text-[10px] text-slate-400">Bisa lebih dari satu (pisahkan koma)</span>
+              </div>
+              <input
+                type="text"
+                value={customFallbackModel}
+                onChange={(e) => setCustomFallbackModel(e.target.value)}
+                placeholder="Contoh: jaa, af/google/gemini-2.5-flash"
+                className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+              <p className="text-[10px] text-slate-400">
+                Jika model utama error, offline, atau sibuk, sistem otomatis mencoba model cadangan ini secara berurutan.
+              </p>
             </div>
           </div>
         )}

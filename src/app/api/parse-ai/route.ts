@@ -310,27 +310,39 @@ export async function POST(req: NextRequest) {
       signal: AbortSignal.timeout(45000),
     });
 
-    // Auto-fallback: Jika model yang dimasukkan user error/down (404/500/dll), coba otomatis fallback ke model 'jaa'
-    if (!response.ok && model !== 'jaa') {
-      try {
-        const fallbackRes = await fetch(cleanEndpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            model: 'jaa',
-            messages,
-            temperature: 0.1,
-            stream: false,
-          }),
-          signal: AbortSignal.timeout(30000),
-        });
-        if (fallbackRes.ok) {
-          response = fallbackRes;
-        }
-      } catch {}
+    // Siapkan daftar model fallback (bisa dipisah koma), default cadangan terakhir adalah 'jaa'
+    const fallbackList = (config?.customFallbackModel || process.env.NEXT_PUBLIC_AI_FALLBACK_MODEL || 'jaa')
+      .split(',')
+      .map((m: string) => m.trim())
+      .filter((m: string) => m && m !== model);
+    if (!fallbackList.includes('jaa') && model !== 'jaa') {
+      fallbackList.push('jaa');
+    }
+
+    // Auto-fallback: Jika model utama error/down (404/500/dll), coba berurutan ke daftar fallback
+    if (!response.ok && fallbackList.length > 0) {
+      for (const fbModel of fallbackList) {
+        try {
+          const fallbackRes = await fetch(cleanEndpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              model: fbModel,
+              messages,
+              temperature: 0.1,
+              stream: false,
+            }),
+            signal: AbortSignal.timeout(30000),
+          });
+          if (fallbackRes.ok) {
+            response = fallbackRes;
+            break;
+          }
+        } catch {}
+      }
     }
 
     if (!response.ok) {

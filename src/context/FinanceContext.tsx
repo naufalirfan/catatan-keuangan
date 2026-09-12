@@ -115,7 +115,8 @@ const DEFAULT_AI_CONFIG: AiConfig = {
   geminiModel: 'gemini-1.5-flash',
   customEndpoint: process.env.NEXT_PUBLIC_AI_ENDPOINT || 'https://9router.naufalputra.my.id/v1',
   customAuthToken: process.env.NEXT_PUBLIC_AI_AUTH_TOKEN || 'sk-f7dc96564905d265-i8kpea-767a0d95',
-  customModel: process.env.NEXT_PUBLIC_AI_MODEL || 'jaa',
+  customModel: process.env.NEXT_PUBLIC_AI_MODEL || 'joo',
+  customFallbackModel: process.env.NEXT_PUBLIC_AI_FALLBACK_MODEL || 'jaa',
 };
 
 
@@ -262,6 +263,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
           customEndpoint: parsed.customEndpoint?.trim() || DEFAULT_AI_CONFIG.customEndpoint,
           customAuthToken: parsed.customAuthToken?.trim() || DEFAULT_AI_CONFIG.customAuthToken,
           customModel: parsed.customModel?.trim() || DEFAULT_AI_CONFIG.customModel,
+          customFallbackModel: parsed.customFallbackModel?.trim() || DEFAULT_AI_CONFIG.customFallbackModel || 'jaa',
         });
       } catch {}
     }

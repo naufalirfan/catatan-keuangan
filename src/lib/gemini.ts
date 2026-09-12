@@ -333,17 +333,29 @@ async function callCustomEndpoint(
     body: JSON.stringify(body),
   });
 
-  if (!res.ok && config.customModel && config.customModel !== 'jaa') {
-    try {
-      const fbRes = await fetch(endpoint, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ ...body, model: 'jaa' }),
-      });
-      if (fbRes.ok) {
-        res = fbRes;
-      }
-    } catch {}
+  const currentModel = config.customModel || 'joo';
+  const fallbackList = (config.customFallbackModel || 'jaa')
+    .split(',')
+    .map((m: string) => m.trim())
+    .filter((m: string) => m && m !== currentModel);
+  if (!fallbackList.includes('jaa') && currentModel !== 'jaa') {
+    fallbackList.push('jaa');
+  }
+
+  if (!res.ok && fallbackList.length > 0) {
+    for (const fbModel of fallbackList) {
+      try {
+        const fbRes = await fetch(endpoint, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ ...body, model: fbModel }),
+        });
+        if (fbRes.ok) {
+          res = fbRes;
+          break;
+        }
+      } catch {}
+    }
   }
 
   if (!res.ok) {

@@ -204,7 +204,6 @@ async function callGeminiApi(
         parts: [{ text: SYSTEM_INSTRUCTION }],
       },
       generationConfig: {
-        responseMimeType: 'application/json',
         temperature: 0.1,
       },
     }),
@@ -212,7 +211,12 @@ async function callGeminiApi(
 
   if (!res.ok) {
     const errText = await res.text();
-    throw new Error(`Gemini API Error (${res.status}): ${errText}`);
+    let detail = errText;
+    try {
+      const errObj = JSON.parse(errText);
+      detail = errObj.error?.message || errText;
+    } catch {}
+    throw new Error(`Gemini API Error (${res.status}): ${detail}`);
   }
 
   const data = await res.json();
@@ -221,18 +225,35 @@ async function callGeminiApi(
     throw new Error('Respon Gemini kosong');
   }
 
-  const parsed = JSON.parse(rawResponse);
-  return {
-    type: parsed.type || 'expense',
-    amount: Number(parsed.amount) || 0,
-    category: parsed.category || 'Pengeluaran Lainnya',
-    account: parsed.account || 'Uang Tunai (Dompet)',
-    to_account: parsed.to_account || undefined,
-    date: parsed.date || new Date().toISOString().split('T')[0],
-    note: parsed.note || input,
-    confidence: 0.98,
-    raw_text: input,
-  };
+  // Robust JSON extractor
+  const jsonMatch = rawResponse.match(/\{[\s\S]*?\}/);
+  if (jsonMatch) {
+    try {
+      const parsed = JSON.parse(jsonMatch[0]);
+      let amount = 0;
+      if (typeof parsed.amount === 'number') {
+        amount = parsed.amount;
+      } else if (typeof parsed.amount === 'string') {
+        amount = parseInt(parsed.amount.replace(/[^0-9]/g, ''), 10) || 0;
+      }
+
+      return {
+        type: parsed.type || 'expense',
+        amount,
+        category: parsed.category || 'Belanja & Kebutuhan',
+        account: parsed.account || 'Uang Tunai (Dompet)',
+        to_account: parsed.to_account || undefined,
+        date: parsed.date || new Date().toISOString().split('T')[0],
+        note: (parsed.note || input || 'Struk Belanja').replace(/^[:\-\s]+/, '').trim(),
+        confidence: 0.98,
+        raw_text: input,
+      };
+    } catch {}
+  }
+
+  // Fallback to local parsing if JSON missing
+  const localFallback = parseTransactionLocally(input || rawResponse);
+  return localFallback;
 }
 
 async function callCustomEndpoint(

@@ -118,6 +118,73 @@ export async function POST(req: NextRequest) {
   try {
     const { input, imageBase64, config } = await req.json();
 
+    // 1. If provider is Gemini, call official Google Gemini API
+    const isGemini = config?.provider === 'gemini';
+    if (isGemini) {
+      const apiKey = config?.geminiApiKey?.trim() || process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        return NextResponse.json({ error: 'Gemini API Key belum diisi. Silakan masukkan di menu Pengaturan.' }, { status: 400 });
+      }
+
+      const model = config?.geminiModel?.trim() || 'gemini-1.5-flash';
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+      const contents: Array<{ parts: Array<Record<string, unknown>> }> = [];
+      const parts: Array<Record<string, unknown>> = [];
+
+      if (imageBase64) {
+        const match = imageBase64.match(/^data:(image\/[a-zA-Z+]+);base64,(.+)$/);
+        if (match) {
+          parts.push({
+            inlineData: {
+              mimeType: match[1],
+              data: match[2],
+            },
+          });
+        }
+        parts.push({
+          text: `Ini adalah gambar struk/nota belanja. Analisis total harga/nominal akhir yang dibayarkan, nama toko/merchant, tanggal, dan rincian transaksi. Kembalikan HANYA JSON: {"type": "expense", "amount": 0, "category": "Belanja & Kebutuhan", "note": "Nama Toko", "date": "YYYY-MM-DD"}. Catatan tambahan: ${input || ''}`,
+        });
+      } else {
+        parts.push({
+          text: `Catat transaksi keuangan ini ke format JSON: "${input}"`,
+        });
+      }
+
+      contents.push({ parts });
+
+      const geminiRes = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents,
+          systemInstruction: {
+            parts: [{ text: SYSTEM_INSTRUCTION }],
+          },
+          generationConfig: {
+            temperature: 0.1,
+          },
+        }),
+        signal: AbortSignal.timeout(45000),
+      });
+
+      if (!geminiRes.ok) {
+        const errText = await geminiRes.text();
+        let detail = errText;
+        try {
+          const errObj = JSON.parse(errText);
+          detail = errObj.error?.message || errText;
+        } catch {}
+        return NextResponse.json({ error: `Gemini API Error (${geminiRes.status}): ${detail}` }, { status: geminiRes.status });
+      }
+
+      const geminiData = await geminiRes.json();
+      const rawContent = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      const result = extractTransaction(rawContent, input);
+      return NextResponse.json(result);
+    }
+
+    // 2. Custom Endpoint (e.g. OpenAI / 9Router)
     const endpoint = config?.customEndpoint?.trim() || process.env.NEXT_PUBLIC_AI_ENDPOINT || 'https://9router.naufalputra.my.id/v1';
     const cleanEndpoint = endpoint.endsWith('/v1')
       ? `${endpoint}/chat/completions`

@@ -327,11 +327,24 @@ async function callCustomEndpoint(
     stream: false,
   };
 
-  const res = await fetch(endpoint, {
+  let res = await fetch(endpoint, {
     method: 'POST',
     headers,
     body: JSON.stringify(body),
   });
+
+  if (!res.ok && config.customModel && config.customModel !== 'jaa') {
+    try {
+      const fbRes = await fetch(endpoint, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ ...body, model: 'jaa' }),
+      });
+      if (fbRes.ok) {
+        res = fbRes;
+      }
+    } catch {}
+  }
 
   if (!res.ok) {
     const errText = await res.text();

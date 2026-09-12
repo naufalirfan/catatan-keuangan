@@ -295,7 +295,7 @@ export async function POST(req: NextRequest) {
       },
     ];
 
-    const response = await fetch(cleanEndpoint, {
+    let response = await fetch(cleanEndpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -309,6 +309,29 @@ export async function POST(req: NextRequest) {
       }),
       signal: AbortSignal.timeout(45000),
     });
+
+    // Auto-fallback: Jika model yang dimasukkan user error/down (404/500/dll), coba otomatis fallback ke model 'jaa'
+    if (!response.ok && model !== 'jaa') {
+      try {
+        const fallbackRes = await fetch(cleanEndpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            model: 'jaa',
+            messages,
+            temperature: 0.1,
+            stream: false,
+          }),
+          signal: AbortSignal.timeout(30000),
+        });
+        if (fallbackRes.ok) {
+          response = fallbackRes;
+        }
+      } catch {}
+    }
 
     if (!response.ok) {
       const errText = await response.text();

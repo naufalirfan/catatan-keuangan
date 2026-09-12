@@ -33,13 +33,15 @@ export default function RootLayout({
     <html lang="id" suppressHydrationWarning className="h-full antialiased font-sans">
       <head>
         <script
+          id="theme-initializer"
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
                 try {
                   var saved = localStorage.getItem('theme');
                   var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                  if (saved === 'dark' || (!saved && prefersDark)) {
+                  var isDark = saved === 'dark' || (saved !== 'light' && prefersDark);
+                  if (isDark) {
                     document.documentElement.classList.add('dark');
                   } else {
                     document.documentElement.classList.remove('dark');
@@ -50,7 +52,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors">
+      <body className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans">
         <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" />
         <FinanceProvider>
           <AuthGate>

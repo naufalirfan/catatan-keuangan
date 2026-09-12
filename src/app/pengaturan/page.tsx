@@ -28,7 +28,8 @@ import {
   Plus,
   ListFilter,
   X,
-  Loader2
+  Loader2,
+  Database
 } from 'lucide-react';
 import SuperAdminMemberManager from '@/components/SuperAdminMemberManager';
 
@@ -45,6 +46,8 @@ export default function PengaturanPage() {
     exportToCsv,
     exportToExcel,
     importFromJson,
+    importFromCkbakFile,
+    loadNaufalBackupData,
     resetToDefault
   } = useFinance();
 
@@ -76,6 +79,7 @@ export default function PengaturanPage() {
   const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
 
   // Model status checker state
   const [modelStatuses, setModelStatuses] = useState<
@@ -199,21 +203,45 @@ export default function PengaturanPage() {
     setIsTesting(false);
   };
 
-  const handleFileImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const content = event.target?.result as string;
-      const success = importFromJson(content);
-      if (success) {
-        alert('Data berhasil dipulihkan dari backup JSON!');
-      } else {
-        alert('Format file JSON tidak valid.');
+    const lowerName = file.name.toLowerCase();
+
+    if (lowerName.endsWith('.ckbak')) {
+      setIsImporting(true);
+      try {
+        const res = await importFromCkbakFile(file);
+        alert(res.message);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Gagal memproses file .ckbak';
+        alert(msg);
+      } finally {
+        setIsImporting(false);
+        e.target.value = '';
       }
-    };
-    reader.readAsText(file);
+      return;
+    }
+
+    if (lowerName.endsWith('.json')) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const content = event.target?.result as string;
+        const success = importFromJson(content);
+        if (success) {
+          alert('Data berhasil dipulihkan dari backup JSON!');
+        } else {
+          alert('Format file JSON tidak valid.');
+        }
+        e.target.value = '';
+      };
+      reader.readAsText(file);
+      return;
+    }
+
+    alert('Format file tidak didukung. Harap pilih file cadangan .json atau .ckbak.');
+    e.target.value = '';
   };
 
   return (
@@ -718,6 +746,54 @@ export default function PengaturanPage() {
       {/* Superadmin Member Management */}
       {isSuperAdmin && <SuperAdminMemberManager />}
 
+      {/* Superadmin / Naufal Account Backup Card */}
+      {(isSuperAdmin || user?.email?.toLowerCase() === 'naufalfaster@gmail.com') && (
+        <div className="p-5 rounded-3xl bg-gradient-to-br from-indigo-950/60 via-purple-950/40 to-slate-900 border border-indigo-500/40 shadow-sm space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2.5 rounded-xl bg-indigo-600 text-white shadow-sm shadow-indigo-600/30">
+                <Database className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <span>Data Akun naufalfaster@gmail.com</span>
+                  <span className="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                    754 Transaksi Asli
+                  </span>
+                </h2>
+                <p className="text-[11px] text-slate-400">
+                  Data Catatan Keuangan Anda sudah tersambung langsung ke akun ini
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-3 rounded-2xl bg-slate-900/80 border border-indigo-500/20 text-[11px] text-slate-300 space-y-1">
+            <div className="flex justify-between">
+              <span className="text-slate-400">Total Transaksi:</span>
+              <span className="font-semibold text-white">754 Transaksi (2024 - 2026)</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-400">Total Pengeluaran:</span>
+              <span className="font-semibold text-rose-400">Rp 17.191.715</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-400">Total Pemasukan:</span>
+              <span className="font-semibold text-emerald-400">Rp 1.000.000</span>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={loadNaufalBackupData}
+            className="w-full py-2.5 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-md shadow-indigo-600/30 flex items-center justify-center gap-2"
+          >
+            <Database className="w-4 h-4" />
+            <span>🔄 Muat / Pulihkan 754 Transaksi Asli Sekarang</span>
+          </button>
+        </div>
+      )}
+
       {/* Backup & Restore Data Card */}
       <div className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-3">
         <h2 className="text-sm font-bold text-slate-900 dark:text-white">
@@ -767,18 +843,53 @@ export default function PengaturanPage() {
             </span>
           </button>
 
-          <label className="p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/60 dark:hover:bg-slate-800 border border-slate-200/60 dark:border-slate-700 text-left cursor-pointer transition-colors block">
-            <Upload className="w-4 h-4 text-cyan-500 mb-1" />
+          <label className="p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/60 dark:hover:bg-slate-800 border border-slate-200/60 dark:border-slate-700 text-left cursor-pointer transition-colors block relative">
+            <div className="flex items-center justify-between mb-1">
+              {isImporting ? (
+                <Loader2 className="w-4 h-4 text-cyan-500 animate-spin" />
+              ) : (
+                <Upload className="w-4 h-4 text-cyan-500" />
+              )}
+              <span className="text-[9px] font-bold px-1 py-0.5 rounded bg-cyan-500/10 text-cyan-500 dark:text-cyan-400">
+                JSON / CKBAK
+              </span>
+            </div>
             <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block">
-              Pulihkan (JSON)
+              {isImporting ? 'Mengimpor...' : 'Pulihkan Data'}
             </span>
             <span className="text-[10px] text-slate-400">
-              Unggah file backup
+              {isImporting ? 'Memproses database...' : 'File .json atau .ckbak'}
             </span>
             <input
               type="file"
-              accept=".json"
+              accept=".json,.ckbak"
               onChange={handleFileImport}
+              disabled={isImporting}
+              className="hidden"
+            />
+          </label>
+
+          {/* New dedicated Card for CKBAK Android */}
+          <label className="p-3 rounded-2xl bg-gradient-to-br from-cyan-500/10 via-teal-500/10 to-emerald-500/10 hover:from-cyan-500/20 hover:to-emerald-500/20 border border-cyan-500/30 text-left cursor-pointer transition-all block col-span-2">
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-1.5">
+                <Database className="w-4 h-4 text-cyan-500" />
+                <span className="text-xs font-bold text-slate-900 dark:text-white">
+                  Impor Cadangan Catatan Keuangan (.ckbak)
+                </span>
+              </div>
+              <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-emerald-500 text-slate-950">
+                BARU
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              Pilih langsung file <b>.ckbak</b> dari smartphone Android Anda. Semua transaksi otomatis diekstrak ke aplikasi.
+            </p>
+            <input
+              type="file"
+              accept=".ckbak,.json"
+              onChange={handleFileImport}
+              disabled={isImporting}
               className="hidden"
             />
           </label>

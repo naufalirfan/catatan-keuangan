@@ -16,20 +16,32 @@ import {
 
 export default function Navbar() {
   const { user, logout, isCloudConnected } = useFinance();
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const savedTheme = localStorage.getItem('theme');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        return savedTheme === 'dark' || (savedTheme !== 'light' && prefersDark);
+      } catch {
+        return false;
+      }
+    }
+    return false;
+  });
   const [showProfileMenu, setShowProfileMenu] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const isDark = document.documentElement.classList.contains('dark') ||
-        (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    try {
+      const savedTheme = localStorage.getItem('theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const isDark = savedTheme === 'dark' || (savedTheme !== 'light' && prefersDark);
       setDarkMode(isDark);
       if (isDark) {
         document.documentElement.classList.add('dark');
       } else {
         document.documentElement.classList.remove('dark');
       }
-    }
+    } catch {}
   }, []);
 
   const toggleTheme = () => {

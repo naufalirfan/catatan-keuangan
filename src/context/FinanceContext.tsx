@@ -22,6 +22,8 @@ import { parseGoogleJwt } from '@/lib/googleAuth';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { getUserSession, saveUserSession, clearUserSession } from '@/lib/cookies';
 import * as XLSX from 'xlsx';
+import { NAUFAL_BACKUP_TRANSACTIONS } from '@/data/naufalDefaultTransactions';
+import { parseCkbakArrayBuffer } from '@/lib/ckbakParser';
 
 const SUPERADMIN_EMAIL = 'naufalfaster@gmail.com';
 
@@ -86,6 +88,8 @@ interface FinanceContextType {
   exportToExcel: () => void;
   exportToJson: () => void;
   importFromJson: (jsonData: string) => boolean;
+  importFromCkbakFile: (file: File) => Promise<{ success: boolean; count: number; message: string }>;
+  loadNaufalBackupData: () => void;
   resetToDefault: () => void;
 
   // Member Management (Superadmin)
@@ -196,15 +200,28 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
 
     // Load Transactions
+    const isNaufal = activeUser.email.toLowerCase() === SUPERADMIN_EMAIL.toLowerCase();
     const savedTx = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS(uid));
     if (savedTx) {
       try {
-        setTransactions(JSON.parse(savedTx));
+        const parsed = JSON.parse(savedTx);
+        if (isNaufal && (!Array.isArray(parsed) || parsed.length <= 20 || (parsed.length > 0 && parsed[0].id === 'tx-1'))) {
+          const naufalData = NAUFAL_BACKUP_TRANSACTIONS.map((t) => ({ ...t, user_id: uid }));
+          setTransactions(naufalData);
+          localStorage.setItem(STORAGE_KEYS.TRANSACTIONS(uid), JSON.stringify(naufalData));
+        } else {
+          setTransactions(parsed);
+        }
       } catch {
-        setTransactions(getInitialTransactions(uid));
+        const fallback = isNaufal 
+          ? NAUFAL_BACKUP_TRANSACTIONS.map((t) => ({ ...t, user_id: uid })) 
+          : getInitialTransactions(uid);
+        setTransactions(fallback);
       }
     } else {
-      const initial = getInitialTransactions(uid);
+      const initial = isNaufal
+        ? NAUFAL_BACKUP_TRANSACTIONS.map((t) => ({ ...t, user_id: uid }))
+        : getInitialTransactions(uid);
       setTransactions(initial);
       localStorage.setItem(STORAGE_KEYS.TRANSACTIONS(uid), JSON.stringify(initial));
     }
@@ -852,6 +869,50 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const importFromCkbakFile = async (file: File): Promise<{ success: boolean; count: number; message: string }> => {
+    try {
+      const buffer = await file.arrayBuffer();
+      let parsedTxs: Transaction[] = [];
+
+      try {
+        parsedTxs = await parseCkbakArrayBuffer(buffer, user?.id || 'demo-user');
+      } catch (clientErr) {
+        console.warn('Parsing ckbak di browser gagal, mencoba fallback ke API...', clientErr);
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await fetch('/api/parse-ckbak', { method: 'POST', body: formData });
+        const json = await res.json();
+        if (json.transactions) {
+          parsedTxs = json.transactions;
+        }
+      }
+
+      if (!parsedTxs || parsedTxs.length === 0) {
+        return { success: false, count: 0, message: 'Tidak ada data transaksi yang dapat dibaca dari file .ckbak ini.' };
+      }
+
+      const uid = user?.id || 'demo-user';
+      const scopedTxs = parsedTxs.map((t) => ({ ...t, user_id: uid }));
+      persistTransactions(scopedTxs);
+
+      return {
+        success: true,
+        count: scopedTxs.length,
+        message: `Berhasil memulihkan ${scopedTxs.length} transaksi dari file Catatan Keuangan (.ckbak)!`,
+      };
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Terjadi kesalahan saat memproses file .ckbak';
+      return { success: false, count: 0, message: msg };
+    }
+  };
+
+  const loadNaufalBackupData = () => {
+    const uid = user?.id || 'admin-naufal';
+    const naufalData = NAUFAL_BACKUP_TRANSACTIONS.map((t) => ({ ...t, user_id: uid }));
+    persistTransactions(naufalData);
+    alert(`Berhasil memuat ${naufalData.length} transaksi asli Catatan Keuangan untuk akun ${SUPERADMIN_EMAIL}!`);
+  };
+
   const resetToDefault = () => {
     if (!confirm('Yakin ingin mereset data transaksi ke contoh bawaan akun ini?')) return;
     const uid = user?.id || 'demo-user';
@@ -992,6 +1053,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         exportToExcel,
         exportToJson,
         importFromJson,
+        importFromCkbakFile,
+        loadNaufalBackupData,
         resetToDefault,
         members,
         updateMemberPlan,

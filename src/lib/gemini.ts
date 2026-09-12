@@ -167,14 +167,17 @@ async function callGeminiApi(
   imageBase64?: string
 ): Promise<ParsedAiTransaction> {
   const model = config.geminiModel || 'gemini-1.5-flash';
-  const apiKey = config.geminiApiKey;
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  const apiKey = config.geminiApiKey?.trim();
+  if (!apiKey) {
+    throw new Error('API Key Gemini belum diisi. Silakan masukkan di menu Pengaturan.');
+  }
+
+  const requestedModel = config.geminiModel || 'gemini-1.5-flash';
 
   const contents: Array<{ parts: Array<Record<string, unknown>> }> = [];
   const parts: Array<Record<string, unknown>> = [];
 
   if (imageBase64) {
-    // extract mime type and data
     const match = imageBase64.match(/^data:(image\/[a-zA-Z+]+);base64,(.+)$/);
     if (match) {
       parts.push({
@@ -195,34 +198,61 @@ async function callGeminiApi(
 
   contents.push({ parts });
 
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents,
-      systemInstruction: {
-        parts: [{ text: SYSTEM_INSTRUCTION }],
-      },
-      generationConfig: {
-        temperature: 0.1,
-      },
-    }),
-  });
+  const requestBody = {
+    contents,
+    systemInstruction: {
+      parts: [{ text: SYSTEM_INSTRUCTION }],
+    },
+    generationConfig: {
+      temperature: 0.1,
+    },
+  };
 
-  if (!res.ok) {
-    const errText = await res.text();
-    let detail = errText;
-    try {
-      const errObj = JSON.parse(errText);
-      detail = errObj.error?.message || errText;
-    } catch {}
-    throw new Error(`Gemini API Error (${res.status}): ${detail}`);
+  const modelCandidates = Array.from(new Set([
+    requestedModel,
+    'gemini-1.5-flash-latest',
+    'gemini-1.5-flash',
+    'gemini-2.0-flash',
+    'gemini-1.5-flash-002',
+    'gemini-1.5-pro-latest',
+  ]));
+
+  let rawResponse = '';
+  let lastErrorMsg = '';
+
+  for (const cand of modelCandidates) {
+    for (const ver of ['v1', 'v1beta']) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/${ver}/models/${cand}:generateContent?key=${apiKey}`;
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestBody),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          rawResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          if (rawResponse) break;
+        } else {
+          const errText = await res.text();
+          let detail = errText;
+          try {
+            const errObj = JSON.parse(errText);
+            detail = errObj.error?.message || errText;
+          } catch {}
+          lastErrorMsg = `(${res.status}): ${detail}`;
+          if (res.status === 400 || res.status === 403) break;
+        }
+      } catch (e: unknown) {
+        lastErrorMsg = e instanceof Error ? e.message : String(e);
+      }
+    }
+    if (rawResponse) break;
   }
 
-  const data = await res.json();
-  const rawResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!rawResponse) {
-    throw new Error('Respon Gemini kosong');
+    throw new Error(`Gemini API Error: ${lastErrorMsg}`);
   }
 
   // Robust JSON extractor

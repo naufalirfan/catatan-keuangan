@@ -118,7 +118,7 @@ export async function POST(req: NextRequest) {
   try {
     const { input, imageBase64, config } = await req.json();
 
-    // 1. If provider is Gemini, call official Google Gemini API
+    // 1. If provider is Gemini, call official Google Gemini API with smart model fallback
     const isGemini = config?.provider === 'gemini';
     if (isGemini) {
       const apiKey = config?.geminiApiKey?.trim() || process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
@@ -126,8 +126,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Gemini API Key belum diisi. Silakan masukkan di menu Pengaturan.' }, { status: 400 });
       }
 
-      const model = config?.geminiModel?.trim() || 'gemini-1.5-flash';
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      const requestedModel = config?.geminiModel?.trim() || 'gemini-1.5-flash';
 
       const contents: Array<{ parts: Array<Record<string, unknown>> }> = [];
       const parts: Array<Record<string, unknown>> = [];
@@ -153,35 +152,110 @@ export async function POST(req: NextRequest) {
 
       contents.push({ parts });
 
-      const geminiRes = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents,
-          systemInstruction: {
-            parts: [{ text: SYSTEM_INSTRUCTION }],
-          },
-          generationConfig: {
-            temperature: 0.1,
-          },
-        }),
-        signal: AbortSignal.timeout(45000),
-      });
+      const requestBody = {
+        contents,
+        systemInstruction: {
+          parts: [{ text: SYSTEM_INSTRUCTION }],
+        },
+        generationConfig: {
+          temperature: 0.1,
+        },
+      };
 
-      if (!geminiRes.ok) {
-        const errText = await geminiRes.text();
-        let detail = errText;
-        try {
-          const errObj = JSON.parse(errText);
-          detail = errObj.error?.message || errText;
-        } catch {}
-        return NextResponse.json({ error: `Gemini API Error (${geminiRes.status}): ${detail}` }, { status: geminiRes.status });
+      // Try different Gemini models and API versions (v1 vs v1beta)
+      const modelCandidates = [
+        requestedModel,
+        'gemini-1.5-flash-latest',
+        'gemini-1.5-flash',
+        'gemini-2.0-flash',
+        'gemini-1.5-flash-002',
+        'gemini-1.5-pro-latest',
+        'gemini-1.5-pro',
+      ];
+      // Filter unique candidates
+      const uniqueCandidates = Array.from(new Set(modelCandidates));
+
+      let geminiSuccessResponse = null;
+      let lastGeminiError = '';
+
+      for (const cand of uniqueCandidates) {
+        for (const ver of ['v1', 'v1beta']) {
+          try {
+            const url = `https://generativelanguage.googleapis.com/${ver}/models/${cand}:generateContent?key=${apiKey}`;
+            const res = await fetch(url, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(requestBody),
+              signal: AbortSignal.timeout(20000),
+            });
+
+            if (res.ok) {
+              const data = await res.json();
+              const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+              if (raw) {
+                geminiSuccessResponse = raw;
+                break;
+              }
+            } else {
+              const errText = await res.text();
+              let msg = errText;
+              try {
+                const j = JSON.parse(errText);
+                msg = j.error?.message || errText;
+              } catch {}
+              lastGeminiError = `(${res.status}): ${msg}`;
+              // If not 404 (e.g. 400 Bad Request or 403 API key invalid), don't keep trying models
+              if (res.status === 400 || res.status === 403) {
+                break;
+              }
+            }
+          } catch (e: unknown) {
+            lastGeminiError = e instanceof Error ? e.message : String(e);
+          }
+        }
+        if (geminiSuccessResponse) break;
       }
 
-      const geminiData = await geminiRes.json();
-      const rawContent = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      const result = extractTransaction(rawContent, input);
-      return NextResponse.json(result);
+      // If still not found, query ListModels from Google to find active models for this key
+      if (!geminiSuccessResponse && !lastGeminiError.includes('API_KEY_INVALID')) {
+        try {
+          for (const ver of ['v1', 'v1beta']) {
+            const listRes = await fetch(`https://generativelanguage.googleapis.com/${ver}/models?key=${apiKey}`);
+            if (listRes.ok) {
+              const listData = await listRes.json();
+              const models = (listData.models || []) as Array<{ name: string; supportedGenerationMethods?: string[] }>;
+              const supported = models.filter(m => m.supportedGenerationMethods?.includes('generateContent'));
+              for (const sm of supported) {
+                const cleanName = sm.name.replace(/^models\//, '');
+                const url = `https://generativelanguage.googleapis.com/${ver}/models/${cleanName}:generateContent?key=${apiKey}`;
+                const res = await fetch(url, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(requestBody),
+                  signal: AbortSignal.timeout(20000),
+                });
+                if (res.ok) {
+                  const data = await res.json();
+                  const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                  if (raw) {
+                    geminiSuccessResponse = raw;
+                    break;
+                  }
+                }
+              }
+            }
+            if (geminiSuccessResponse) break;
+          }
+        } catch {}
+      }
+
+      if (geminiSuccessResponse) {
+        const result = extractTransaction(geminiSuccessResponse, input);
+        return NextResponse.json(result);
+      }
+
+      // If Gemini failed (e.g. 404 or quota), log warning and proceed to fallback router below
+      console.warn('Gemini failed with error:', lastGeminiError, 'Falling back to default AI Router...');
     }
 
     // 2. Custom Endpoint (e.g. OpenAI / 9Router)

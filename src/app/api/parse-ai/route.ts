@@ -131,7 +131,7 @@ export async function POST(req: NextRequest) {
   try {
     const { input, imageBase64, config } = await req.json();
 
-    // 1. If provider is Gemini, call official Google Gemini API with smart model fallback
+    // 1. If provider is Gemini, call official Google Gemini API with smart model discovery
     const isGemini = config?.provider === 'gemini';
     if (isGemini) {
       const apiKey = config?.geminiApiKey?.trim() || process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
@@ -141,110 +141,143 @@ export async function POST(req: NextRequest) {
 
       const requestedModel = config?.geminiModel?.trim() || 'gemini-1.5-flash';
 
-      const contents: Array<{ parts: Array<Record<string, unknown>> }> = [];
-      const parts: Array<Record<string, unknown>> = [];
+      // 1. First, check available models directly via ListModels to know exactly what this API key has access to!
+      let availableModels: string[] = [];
+      let listModelsError = '';
 
-      if (imageBase64) {
-        const match = imageBase64.match(/^data:(image\/[a-zA-Z+]+);base64,(.+)$/);
-        if (match) {
-          parts.push({
-            inlineData: {
-              mimeType: match[1],
-              data: match[2],
-            },
-          });
-        }
-        parts.push({
-          text: `Ini adalah gambar struk/nota belanja. Analisis total harga/nominal akhir yang dibayarkan, nama toko/merchant, tanggal, dan rincian transaksi. Kembalikan HANYA JSON: {"type": "expense", "amount": 0, "category": "Belanja & Kebutuhan", "note": "Nama Toko", "date": "YYYY-MM-DD"}. Catatan tambahan: ${input || ''}`,
-        });
-      } else {
-        parts.push({
-          text: `Catat transaksi keuangan ini ke format JSON: "${input}"`,
-        });
-      }
-
-      contents.push({ parts });
-
-      const requestBody = {
-        contents,
-        systemInstruction: {
-          parts: [{ text: SYSTEM_INSTRUCTION }],
-        },
-        generationConfig: {
-          temperature: 0.1,
-        },
-      };
-
-      // Try Gemini models on v1beta (official endpoint for Gemini 1.5 & 2.0 with system instructions)
-      const modelCandidates = [
-        requestedModel,
-        'gemini-1.5-flash',
-        'gemini-2.0-flash',
-        'gemini-1.5-flash-latest',
-        'gemini-1.5-flash-8b',
-        'gemini-1.5-pro',
-      ];
-      const uniqueCandidates = Array.from(new Set(modelCandidates));
-
-      let geminiSuccessResponse: string | null = null;
-      let successfulGeminiModel = requestedModel;
-      let lastGeminiError = '';
-
-      for (const cand of uniqueCandidates) {
+      for (const ver of ['v1beta', 'v1']) {
         try {
-          const url = `https://generativelanguage.googleapis.com/v1beta/models/${cand}:generateContent?key=${apiKey}`;
-          const res = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(requestBody),
-            signal: AbortSignal.timeout(20000),
+          const listRes = await fetch(`https://generativelanguage.googleapis.com/${ver}/models?key=${apiKey}`, {
+            signal: AbortSignal.timeout(10000),
           });
-
-          if (res.ok) {
-            const data = await res.json();
-            const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-            if (raw) {
-              geminiSuccessResponse = raw;
-              successfulGeminiModel = cand;
+          if (listRes.ok) {
+            const listData = await listRes.json();
+            const supported = (listData.models || [])
+              .filter((m: { supportedGenerationMethods?: string[] }) => m.supportedGenerationMethods?.includes('generateContent'))
+              .map((m: { name: string }) => m.name.replace(/^models\//, ''));
+            if (supported.length > 0) {
+              availableModels = supported;
               break;
             }
           } else {
-            const errText = await res.text();
+            const errText = await listRes.text();
             let msg = errText;
             try {
-              const j = JSON.parse(errText);
-              msg = j.error?.message || errText;
+              msg = JSON.parse(errText).error?.message || errText;
             } catch {}
-            lastGeminiError = `(${res.status}): ${msg}`;
-            if (res.status === 403 || msg.includes('API_KEY_INVALID') || msg.includes('API key not valid')) {
+            listModelsError = `(${listRes.status}): ${msg}`;
+            if (listRes.status === 400 || listRes.status === 403) {
               break;
             }
           }
         } catch (e: unknown) {
-          lastGeminiError = e instanceof Error ? e.message : String(e);
+          listModelsError = e instanceof Error ? e.message : String(e);
         }
       }
 
-      if (geminiSuccessResponse) {
-        const result = extractTransaction(geminiSuccessResponse, input);
-        return NextResponse.json({
-          ...result,
-          _provider: 'gemini',
-          _usedModel: successfulGeminiModel,
-          _isFallback: false,
-        });
-      }
+      // If ListModels failed or returned 0 models:
+      if (availableModels.length === 0) {
+        if (config?.isTest) {
+          return NextResponse.json(
+            {
+              error: `Google Gemini API Key tidak dapat mengakses model. Respon Google: ${listModelsError || 'Tidak ada model generateContent yang aktif'}. Pastikan API Key dibuat melalui Google AI Studio (aistudio.google.com/app/apikey) dan Generative Language API aktif.`,
+            },
+            { status: 400 }
+          );
+        }
+        console.warn('ListModels failed, falling back to custom router...');
+      } else {
+        // We have the exact list of available models for this key!
+        let targetModel = requestedModel;
+        if (!availableModels.includes(targetModel)) {
+          const fallbackMatch = availableModels.find((m: string) => m.includes('flash') || m.includes('pro')) || availableModels[0];
+          targetModel = fallbackMatch;
+        }
 
-      // If this is a connection test, return the Gemini error directly so user knows why it failed!
-      if (config?.isTest) {
-        return NextResponse.json(
-          { error: `Koneksi Google Gemini gagal: ${lastGeminiError || 'Model tidak merespon'}. Pastikan Gemini API Key Anda valid dan kuota mencukupi.` },
-          { status: 400 }
-        );
-      }
+        // Build prompt (embed system instruction in prompt for 100% universal compatibility across all Gemini endpoints)
+        const userPrompt = imageBase64
+          ? `Ini adalah gambar struk/nota belanja. Analisis total harga/nominal akhir yang dibayarkan, nama toko/merchant, tanggal, dan rincian transaksi. Kembalikan HANYA JSON: {"type": "expense", "amount": 0, "category": "Belanja & Kebutuhan", "note": "Nama Toko", "date": "YYYY-MM-DD"}. Catatan user: ${input || ''}`
+          : `${SYSTEM_INSTRUCTION}\n\nCatat transaksi keuangan ini ke format JSON:\n"${input}"`;
 
-      // If Gemini failed in production parsing, log warning and proceed to fallback router
-      console.warn('Gemini failed with error:', lastGeminiError, 'Falling back to default AI Router...');
+        const parts: Array<Record<string, unknown>> = [];
+        if (imageBase64) {
+          const match = imageBase64.match(/^data:(image\/[a-zA-Z+]+);base64,(.+)$/);
+          if (match) {
+            parts.push({
+              inlineData: {
+                mimeType: match[1],
+                data: match[2],
+              },
+            });
+          }
+        }
+        parts.push({ text: userPrompt });
+
+        const requestBody = {
+          contents: [{ parts }],
+          generationConfig: {
+            temperature: 0.1,
+          },
+        };
+
+        const modelsToTry = [targetModel, ...availableModels.filter((m: string) => m !== targetModel)];
+        let geminiSuccessResponse: string | null = null;
+        let successfulGeminiModel = targetModel;
+        let lastGeminiError = '';
+
+        for (const cand of modelsToTry) {
+          for (const ver of ['v1beta', 'v1']) {
+            try {
+              const url = `https://generativelanguage.googleapis.com/${ver}/models/${cand}:generateContent?key=${apiKey}`;
+              const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(requestBody),
+                signal: AbortSignal.timeout(20000),
+              });
+
+              if (res.ok) {
+                const data = await res.json();
+                const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                if (raw) {
+                  geminiSuccessResponse = raw;
+                  successfulGeminiModel = cand;
+                  break;
+                }
+              } else {
+                const errText = await res.text();
+                let msg = errText;
+                try {
+                  msg = JSON.parse(errText).error?.message || errText;
+                } catch {}
+                lastGeminiError = `(${res.status}): ${msg}`;
+              }
+            } catch (e: unknown) {
+              lastGeminiError = e instanceof Error ? e.message : String(e);
+            }
+          }
+          if (geminiSuccessResponse) break;
+        }
+
+        if (geminiSuccessResponse) {
+          const result = extractTransaction(geminiSuccessResponse, input);
+          return NextResponse.json({
+            ...result,
+            _provider: 'gemini',
+            _usedModel: successfulGeminiModel,
+            _isFallback: false,
+          });
+        }
+
+        if (config?.isTest) {
+          return NextResponse.json(
+            { error: `Koneksi Google Gemini gagal pada model [${targetModel}]: ${lastGeminiError}. Model tersedia pada akun/key Anda: ${availableModels.slice(0, 5).join(', ')}` },
+            { status: 400 }
+          );
+        }
+
+        console.warn('Gemini calls failed, falling back to default router...');
+      }
     }
 
     // 2. Custom Endpoint (e.g. OpenAI / 9Router)

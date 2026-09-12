@@ -399,6 +399,9 @@ export default function PengaturanPage() {
               <p className="text-[10px] text-slate-400">
                 API Key disimpan secara privat di perangkat Anda.
               </p>
+              <p className="text-[10px] text-amber-600 dark:text-amber-400">
+                💡 <b>Tips Penting</b>: Pastikan membuat API Key melalui <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="underline font-bold">Google AI Studio</a> (bukan Google Cloud Console biasa) agar model Gemini 1.5 Flash langsung aktif gratis tanpa perlu setel project Cloud.
+              </p>
             </div>
 
             <div className="space-y-1">
@@ -410,9 +413,10 @@ export default function PengaturanPage() {
                 onChange={(e) => setGeminiModel(e.target.value)}
                 className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white"
               >
-                <option value="gemini-1.5-flash">Gemini 1.5 Flash (Sangat Cepat & Gratis)</option>
+                <option value="gemini-1.5-flash">Gemini 1.5 Flash (Sangat Cepat & Gratis - Rekomendasi)</option>
                 <option value="gemini-2.0-flash">Gemini 2.0 Flash (Generasi Terbaru)</option>
-                <option value="gemini-1.5-pro">Gemini 1.5 Pro (Akurasi Tinggi)</option>
+                <option value="gemini-1.5-flash-8b">Gemini 1.5 Flash 8B (Ultra Ringan)</option>
+                <option value="gemini-1.5-pro">Gemini 1.5 Pro (Akurasi Maksimal)</option>
               </select>
             </div>
           </div>

@@ -27,6 +27,7 @@ import {
 export default function PengaturanPage() {
   const { 
     user, 
+    isSuperAdmin,
     logout, 
     aiConfig, 
     updateAiConfig, 
@@ -118,24 +119,54 @@ export default function PengaturanPage() {
         </p>
       </div>
 
-      {/* AI Configuration Box */}
-      <div className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
-        
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-600 text-white shadow-sm shadow-emerald-500/20">
-              <Sparkles className="w-4 h-4" />
+      {/* Member View vs Superadmin Configuration Box */}
+      {!isSuperAdmin ? (
+        <div className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-3">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2.5 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-600 text-white shadow-sm shadow-emerald-500/20">
+              <Sparkles className="w-5 h-5" />
             </div>
             <div>
               <h2 className="text-sm font-bold text-slate-900 dark:text-white">
-                Konfigurasi AI (Gemini & Custom)
+                Layanan AI Cerdas Aktif ✨
               </h2>
               <p className="text-[11px] text-slate-400">
-                Pilih sumber kecerdasan buatan untuk parsing otomatis
+                Disediakan dan dikonfigurasi langsung oleh Superadmin
               </p>
             </div>
           </div>
+
+          <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+            Anda dapat langsung menggunakan seluruh fitur <strong>Input AI</strong> (ketik bebas bahasa Indonesia, suara, dan scan foto struk belanja) tanpa perlu repot mendaftar atau memasukkan API key sendiri.
+          </p>
+
+          <div className="flex items-center gap-2 p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-300 text-xs font-semibold">
+            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+            <span>AI Ready: Nikmati kemudahan pencatatan instan!</span>
+          </div>
         </div>
+      ) : (
+        <div className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="p-2 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-600 text-white shadow-sm shadow-emerald-500/20">
+                <Sparkles className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+                    Konfigurasi AI (Gemini & Custom)
+                  </h2>
+                  <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 text-[10px] font-bold border border-amber-300 dark:border-amber-700">
+                    👑 Khusus Superadmin
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  Pilih sumber kecerdasan buatan untuk seluruh anggota/member
+                </p>
+              </div>
+            </div>
+          </div>
 
         {/* Provider Switcher */}
         <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-2xl text-xs font-semibold">
@@ -317,6 +348,7 @@ export default function PengaturanPage() {
         </div>
 
       </div>
+      )}
 
       {/* Account & OAuth Status Card */}
       <div className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-3">

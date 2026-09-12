@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 
 export default function AiInputPage() {
-  const { aiConfig } = useFinance();
+  const { aiConfig, isSuperAdmin } = useFinance();
 
   const [mode, setMode] = useState<'text' | 'receipt'>('text');
   const [inputText, setInputText] = useState('');
@@ -163,18 +163,25 @@ export default function AiInputPage() {
           </p>
         </div>
 
-        {/* Current AI Provider Badge */}
-        <Link
-          href="/pengaturan"
-          title="Ubah Konfigurasi AI di Pengaturan"
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-semibold transition-colors"
-        >
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-[11px] truncate max-w-[90px]">
-            {aiConfig.provider === 'gemini' ? 'Gemini AI' : 'Custom AI'}
-          </span>
-          <Settings className="w-3 h-3 text-slate-400" />
-        </Link>
+        {/* Current AI Provider Badge: Superadmin manages config, Member sees ready status */}
+        {isSuperAdmin ? (
+          <Link
+            href="/pengaturan"
+            title="Kelola API Key & Endpoint di Pengaturan (Superadmin)"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-semibold transition-colors"
+          >
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-[11px] truncate max-w-[90px]">
+              {aiConfig.provider === 'gemini' ? 'Gemini AI' : 'Custom AI'}
+            </span>
+            <Settings className="w-3 h-3 text-slate-400" />
+          </Link>
+        ) : (
+          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-300 text-xs font-semibold">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-[11px]">AI Aktif</span>
+          </div>
+        )}
       </div>
 
       {/* Mode Switcher */}

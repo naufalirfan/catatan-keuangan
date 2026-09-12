@@ -10,9 +10,10 @@
   Dibuat dan Dikembangkan dengan ❤️ oleh **[Naufal Irfansyah](https://www.instagram.com/naufal_irfansyah)** ([@naufal_irfansyah](https://www.instagram.com/naufal_irfansyah))
 
   <p align="center">
-    <a href="https://catatan-keuangan-phi.vercel.app">
+    <a href="https://catatan-keuangan-nfl.vercel.app">
       <img src="https://img.shields.io/badge/Live_Demo-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" />
     </a>
+
     <a href="https://github.com/naufalirfan/catatan-keuangan">
       <img src="https://img.shields.io/badge/GitHub-Repository-181717?style=for-the-badge&logo=github&logoColor=white" alt="GitHub Repo" />
     </a>

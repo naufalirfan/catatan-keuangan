@@ -324,6 +324,7 @@ async function callCustomEndpoint(
     model: config.customModel || 'jaa',
     messages,
     temperature: 0.1,
+    stream: false,
   };
 
   const res = await fetch(endpoint, {
@@ -349,7 +350,13 @@ async function callCustomEndpoint(
         try {
           const jsonStr = trimmed.replace(/^data:\s*/, '');
           const chunk = JSON.parse(jsonStr);
-          const delta = chunk.choices?.[0]?.delta?.content || chunk.choices?.[0]?.message?.content || '';
+          const delta =
+            chunk.choices?.[0]?.delta?.content ||
+            chunk.choices?.[0]?.delta?.reasoning_content ||
+            chunk.choices?.[0]?.message?.content ||
+            chunk.choices?.[0]?.message?.reasoning_content ||
+            chunk.choices?.[0]?.text ||
+            '';
           content += delta;
         } catch {}
       }
@@ -357,22 +364,40 @@ async function callCustomEndpoint(
   } else {
     try {
       const data = JSON.parse(rawText);
-      content = data.choices?.[0]?.message?.content || data.choices?.[0]?.text || '';
+      content =
+        data.choices?.[0]?.message?.content ||
+        data.choices?.[0]?.message?.reasoning_content ||
+        data.choices?.[0]?.message?.reasoning ||
+        data.choices?.[0]?.text ||
+        '';
     } catch {
       content = rawText;
     }
   }
 
+  // Clean <think> tags from reasoning models
+  const cleanContent = content.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+
   // Clean json if wrapped in markdown ```json ... ``` or plain text
-  const jsonMatch = content.match(/\{[\s\S]*?\}/);
-  if (!jsonMatch) {
+  let jsonStr = '';
+  const codeBlockMatch = cleanContent.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/i);
+  if (codeBlockMatch) {
+    jsonStr = codeBlockMatch[1];
+  } else {
+    const braceMatch = cleanContent.match(/\{[\s\S]*\}/);
+    if (braceMatch) {
+      jsonStr = braceMatch[0];
+    }
+  }
+
+  if (!jsonStr) {
     // Fallback if model responded in free-form Indonesian text
-    const local = parseTransactionLocally(input || content);
+    const local = parseTransactionLocally(input || cleanContent);
     return local;
   }
 
   try {
-    const parsed = JSON.parse(jsonMatch[0]);
+    const parsed = JSON.parse(jsonStr);
     return {
       type: parsed.type || 'expense',
       amount: Number(parsed.amount) || 0,
@@ -380,12 +405,12 @@ async function callCustomEndpoint(
       account: parsed.account || 'Uang Tunai (Dompet)',
       to_account: parsed.to_account || undefined,
       date: parsed.date || new Date().toISOString().split('T')[0],
-      note: parsed.note || input,
+      note: parsed.note || parsed.description || input,
       confidence: 0.95,
       raw_text: input,
     };
   } catch {
-    return parseTransactionLocally(input || content);
+    return parseTransactionLocally(input || cleanContent);
   }
 }
 
@@ -394,7 +419,7 @@ export async function testAiConnection(config: AiConfig): Promise<{ success: boo
   try {
     const result = await parseTransactionWithAI('Beli kopi 25rb bayar cash', config);
     const latencyMs = Math.round(performance.now() - start);
-    if (result && result.amount) {
+    if (result && typeof result.amount === 'number' && result.amount > 0) {
       return {
         success: true,
         message: `Koneksi berhasil! Respon didapat dalam ${latencyMs}ms (Deteksi: Rp ${result.amount.toLocaleString('id-ID')} untuk ${result.note})`,
@@ -403,7 +428,7 @@ export async function testAiConnection(config: AiConfig): Promise<{ success: boo
     }
     return {
       success: false,
-      message: 'Koneksi terhubung namun format respon tidak sesuai.',
+      message: 'Koneksi terhubung namun format respon tidak sesuai nominal.',
       latencyMs,
     };
   } catch (err: unknown) {

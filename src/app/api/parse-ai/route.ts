@@ -18,11 +18,24 @@ Kembalikan HANYA format JSON valid tanpa markdown, tanpa teks pengantar, dengan 
 }`;
 
 function extractTransaction(content: string, inputFallback?: string) {
-  // 1. Try finding JSON block
-  const jsonMatch = content.match(/\{[\s\S]*?\}/);
-  if (jsonMatch) {
+  // Strip <think>...</think> reasoning tags if emitted by reasoning models
+  const cleanContent = content.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+
+  // 1. Try finding JSON block: code block first, then outermost curly braces
+  let jsonStr = '';
+  const codeBlockMatch = cleanContent.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/i);
+  if (codeBlockMatch) {
+    jsonStr = codeBlockMatch[1];
+  } else {
+    const braceMatch = cleanContent.match(/\{[\s\S]*\}/);
+    if (braceMatch) {
+      jsonStr = braceMatch[0];
+    }
+  }
+
+  if (jsonStr) {
     try {
-      const parsed = JSON.parse(jsonMatch[0]);
+      const parsed = JSON.parse(jsonStr);
       let amt = 0;
       if (typeof parsed.amount === 'number') {
         amt = parsed.amount;
@@ -38,7 +51,7 @@ function extractTransaction(content: string, inputFallback?: string) {
           account: parsed.account || 'Uang Tunai (Dompet)',
           to_account: parsed.to_account || undefined,
           date: parsed.date || new Date().toISOString().split('T')[0],
-          note: (parsed.note || inputFallback || 'Struk Belanja').replace(/^[:\-\s]+/, '').trim(),
+          note: (parsed.note || parsed.description || inputFallback || 'Struk Belanja').replace(/^[:\-\s]+/, '').trim(),
           confidence: 0.98,
           raw_text: content,
         };
@@ -292,6 +305,7 @@ export async function POST(req: NextRequest) {
         model,
         messages,
         temperature: 0.1,
+        stream: false,
       }),
       signal: AbortSignal.timeout(45000),
     });
@@ -313,7 +327,13 @@ export async function POST(req: NextRequest) {
           try {
             const jsonStr = trimmed.replace(/^data:\s*/, '');
             const chunk = JSON.parse(jsonStr);
-            const delta = chunk.choices?.[0]?.delta?.content || chunk.choices?.[0]?.message?.content || '';
+            const delta =
+              chunk.choices?.[0]?.delta?.content ||
+              chunk.choices?.[0]?.delta?.reasoning_content ||
+              chunk.choices?.[0]?.message?.content ||
+              chunk.choices?.[0]?.message?.reasoning_content ||
+              chunk.choices?.[0]?.text ||
+              '';
             content += delta;
           } catch {}
         }
@@ -321,7 +341,12 @@ export async function POST(req: NextRequest) {
     } else {
       try {
         const data = JSON.parse(rawText);
-        content = data.choices?.[0]?.message?.content || data.choices?.[0]?.text || '';
+        content =
+          data.choices?.[0]?.message?.content ||
+          data.choices?.[0]?.message?.reasoning_content ||
+          data.choices?.[0]?.message?.reasoning ||
+          data.choices?.[0]?.text ||
+          '';
       } catch {
         content = rawText;
       }

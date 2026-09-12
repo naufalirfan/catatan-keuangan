@@ -269,19 +269,30 @@ export default function PengaturanPage() {
         ) : (
           /* Custom Endpoint Fields */
           <div className="space-y-3 pt-1">
-            <div className="flex items-center justify-between pb-0.5">
+            <div className="flex items-center justify-between pb-0.5 flex-wrap gap-1.5">
               <span className="text-[11px] font-medium text-slate-500">Preset Rekomendasi:</span>
-              <button
-                type="button"
-                onClick={() => {
-                  setCustomEndpoint('https://9router.naufalputra.my.id/v1');
-                  setCustomModel('jaa');
-                }}
-
-                className="px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800/80 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors flex items-center gap-1"
-              >
-                ⚡ 9Router (JAA) Default
-              </button>
+              <div className="flex gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCustomEndpoint('https://9router.naufalputra.my.id/v1');
+                    setCustomModel('jaa');
+                  }}
+                  className="px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800/80 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors flex items-center gap-1"
+                >
+                  ⚡ JAA (Fast)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCustomEndpoint('https://9router.naufalputra.my.id/v1');
+                    setCustomModel('joo');
+                  }}
+                  className="px-2.5 py-1 rounded-lg bg-cyan-50 dark:bg-cyan-950/50 border border-cyan-200 dark:border-cyan-800/80 text-[11px] font-bold text-cyan-600 dark:text-cyan-400 hover:bg-cyan-100 dark:hover:bg-cyan-900/50 transition-colors flex items-center gap-1"
+                >
+                  🚀 JOO (Smart)
+                </button>
+              </div>
             </div>
 
             <div className="space-y-1">

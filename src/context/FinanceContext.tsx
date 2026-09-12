@@ -378,10 +378,19 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     }
     loadScopedData(loggedUser);
     
+    // Sync session to Supabase in background with ID token if configured
+    if (isSupabaseConfigured && supabase) {
+      supabase.auth.signInWithIdToken({
+        provider: 'google',
+        token: credentialToken,
+      }).catch(() => {});
+    }
+
     // Popup Pro vs Free selection on login!
     setShowPlanModal(true);
     return true;
   }, [loadScopedData]);
+
 
   const loginAsDemo = useCallback(() => {
     const demoUser: UserProfile = {

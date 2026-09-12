@@ -83,6 +83,17 @@ export default function AuthGate({ children }: AuthGateProps) {
     );
   }
 
+  const handleGoogleSignIn = () => {
+    if (typeof window !== 'undefined') {
+      const googleObj = (window as unknown as { google?: { accounts?: { id?: { prompt: () => void } } } }).google;
+      if (googleObj?.accounts?.id) {
+        googleObj.accounts.id.prompt();
+        return;
+      }
+    }
+    signInWithGoogle();
+  };
+
   // If logged in, render child pages
   if (isAuthenticated) {
     return <>{children}</>;
@@ -161,9 +172,10 @@ export default function AuthGate({ children }: AuthGateProps) {
           {/* Primary Google Sign In Button */}
           <button
             type="button"
-            onClick={signInWithGoogle}
+            onClick={handleGoogleSignIn}
             className="w-full flex items-center justify-center gap-3 py-3.5 px-4 rounded-2xl bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/80 text-slate-800 dark:text-slate-100 border border-slate-300 dark:border-slate-700 font-bold text-sm shadow-sm transition-all hover:scale-[1.01] active:scale-[0.99]"
           >
+
             <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
               <path
                 fill="#4285F4"

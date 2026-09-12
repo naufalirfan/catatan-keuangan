@@ -29,9 +29,12 @@ import {
   ListFilter,
   X,
   Loader2,
-  Database
+  Database,
+  Info,
+  Smartphone
 } from 'lucide-react';
 import SuperAdminMemberManager from '@/components/SuperAdminMemberManager';
+import CategoryManager from '@/components/CategoryManager';
 
 export default function PengaturanPage() {
   const { 
@@ -1190,6 +1193,9 @@ export default function PengaturanPage() {
         </div>
       )}
 
+      {/* Kelola Kategori Kustom */}
+      <CategoryManager />
+
       {/* Backup & Restore Data Card */}
       <div className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-3">
         <h2 className="text-sm font-bold text-slate-900 dark:text-white">
@@ -1289,6 +1295,22 @@ export default function PengaturanPage() {
               className="hidden"
             />
           </label>
+        </div>
+
+        {/* Catatan Panduan Impor Catatan Keuangan */}
+        <div className="p-3.5 rounded-2xl bg-cyan-50/70 dark:bg-cyan-950/30 border border-cyan-200/80 dark:border-cyan-800/60 text-xs space-y-1.5">
+          <div className="flex items-center gap-2 text-cyan-800 dark:text-cyan-300 font-semibold">
+            <Smartphone className="w-4 h-4 text-cyan-600 dark:text-cyan-400 shrink-0" />
+            <span>💡 Catatan: Bisa Impor dari Aplikasi &quot;Catatan Keuangan&quot; (Android)</span>
+          </div>
+          <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed pl-6">
+            Bagi Anda yang sebelumnya mencatat di aplikasi Android <b>Catatan Keuangan</b>:
+          </p>
+          <ul className="text-[11px] text-slate-600 dark:text-slate-300 list-disc pl-10 space-y-1">
+            <li>Buka aplikasi Catatan Keuangan di HP &gt; menu <b>Cadangkan / Ekspor</b> (hasil file berupa <code>.ckbak</code>).</li>
+            <li>Klik tombol <b>&quot;Impor Cadangan Catatan Keuangan (.ckbak)&quot;</b> di atas, lalu pilih file tersebut.</li>
+            <li>Sistem akan otomatis mengekstrak transaksi, kategori, dan nominal tanpa perlu input ulang dari awal.</li>
+          </ul>
         </div>
 
         <div className="pt-2 border-t border-slate-100 dark:border-slate-800">

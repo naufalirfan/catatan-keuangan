@@ -20,6 +20,17 @@ import {
   Banknote,
   Smartphone,
   Wallet,
+  Coffee,
+  Gamepad2,
+  Plane,
+  Dumbbell,
+  Home,
+  Baby,
+  Dog,
+  Coins,
+  Briefcase,
+  Tag,
+  Sparkles,
   LucideIcon
 } from 'lucide-react';
 
@@ -44,6 +55,17 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Banknote,
   Smartphone,
   Wallet,
+  Coffee,
+  Gamepad2,
+  Plane,
+  Dumbbell,
+  Home,
+  Baby,
+  Dog,
+  Coins,
+  Briefcase,
+  Tag,
+  Sparkles,
 };
 
 interface CategoryIconProps {

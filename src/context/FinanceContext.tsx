@@ -60,6 +60,10 @@ interface FinanceContextType {
   addAccount: (account: Omit<Account, 'id'>) => void;
   updateAccount: (id: string, updates: Partial<Account>) => void;
   deleteAccount: (id: string) => void;
+  addCategory: (category: Omit<Category, 'id'>) => Category;
+  updateCategory: (id: string, updates: Partial<Omit<Category, 'id'>>) => void;
+  deleteCategory: (id: string) => void;
+  resetCategoriesToDefault: () => void;
   updateBudget: (category: string, limit: number) => void;
   updateAiConfig: (config: Partial<AiConfig>) => void;
 
@@ -667,6 +671,38 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     persistAccounts(accounts.filter((a) => a.id !== id));
   };
 
+  // Category Management
+  const persistCategories = (newCategories: Category[]) => {
+    setCategories(newCategories);
+    const uid = user?.id || 'demo-user';
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(STORAGE_KEYS.CATEGORIES(uid), JSON.stringify(newCategories));
+      } catch {}
+    }
+  };
+
+  const addCategory = (catData: Omit<Category, 'id'>): Category => {
+    const newCat: Category = {
+      ...catData,
+      id: `cat-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+    };
+    persistCategories([...categories, newCat]);
+    return newCat;
+  };
+
+  const updateCategory = (id: string, updates: Partial<Omit<Category, 'id'>>) => {
+    persistCategories(categories.map((c) => (c.id === id ? { ...c, ...updates } : c)));
+  };
+
+  const deleteCategory = (id: string) => {
+    persistCategories(categories.filter((c) => c.id !== id));
+  };
+
+  const resetCategoriesToDefault = () => {
+    persistCategories(DEFAULT_CATEGORIES);
+  };
+
   // Budget
   const updateBudget = (category: string, limit: number) => {
     const currentMonth = new Date().toISOString().slice(0, 7);
@@ -1036,6 +1072,10 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         addAccount,
         updateAccount,
         deleteAccount,
+        addCategory,
+        updateCategory,
+        deleteCategory,
+        resetCategoriesToDefault,
         updateBudget,
         updateAiConfig,
         filterPeriod,

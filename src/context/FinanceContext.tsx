@@ -33,6 +33,7 @@ interface FinanceContextType {
   showPlanModal: boolean;
   setShowPlanModal: (show: boolean) => void;
   setUserPlan: (plan: UserPlan) => void;
+  signInWithGoogle: () => Promise<void>;
   loginWithGoogleCredential: (token: string) => boolean;
   loginAsDemo: () => void;
   loginAsAdmin: () => void;
@@ -95,13 +96,14 @@ const STORAGE_KEYS = {
 };
 
 const DEFAULT_AI_CONFIG: AiConfig = {
-  provider: 'gemini',
+  provider: 'custom',
   geminiApiKey: process.env.NEXT_PUBLIC_GEMINI_API_KEY || '',
   geminiModel: 'gemini-1.5-flash',
-  customEndpoint: process.env.NEXT_PUBLIC_AI_ENDPOINT || '',
+  customEndpoint: process.env.NEXT_PUBLIC_AI_ENDPOINT || 'https://9router.naufalputra.my.id/v1',
   customAuthToken: process.env.NEXT_PUBLIC_AI_AUTH_TOKEN || '',
-  customModel: process.env.NEXT_PUBLIC_AI_MODEL || 'gpt-4o-mini',
+  customModel: process.env.NEXT_PUBLIC_AI_MODEL || 'jaa',
 };
+
 
 export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -199,7 +201,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Initialize from LocalStorage
+  // Initialize from LocalStorage and Supabase Session
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -207,46 +209,100 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     const savedAi = localStorage.getItem(STORAGE_KEYS.AI_CONFIG);
     if (savedAi) {
       try {
-        setAiConfig({ ...DEFAULT_AI_CONFIG, ...JSON.parse(savedAi) });
+        const parsed = JSON.parse(savedAi);
+        setAiConfig({
+          ...DEFAULT_AI_CONFIG,
+          ...parsed,
+          provider: parsed.provider || 'custom',
+          customEndpoint: parsed.customEndpoint?.trim() || DEFAULT_AI_CONFIG.customEndpoint,
+          customAuthToken: parsed.customAuthToken?.trim() || DEFAULT_AI_CONFIG.customAuthToken,
+          customModel: parsed.customModel?.trim() || DEFAULT_AI_CONFIG.customModel,
+        });
       } catch {}
     }
 
-    // Load Active User
+    // Load Active User from LocalStorage if already signed in
     const savedUser = localStorage.getItem(STORAGE_KEYS.USER);
     if (savedUser) {
       try {
         const u = JSON.parse(savedUser);
         setUser(u);
         loadScopedData(u);
-      } catch {
-        const defaultAdmin: UserProfile = {
-          id: 'admin-naufal',
-          name: 'Naufal Irfansyah (Superadmin)',
-          email: SUPERADMIN_EMAIL,
-          picture: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80',
-          plan: 'pro',
-          role: 'admin',
-        };
-        setUser(defaultAdmin);
-        loadScopedData(defaultAdmin);
-      }
-    } else {
-      // Default to Superadmin user directly
-      const defaultAdmin: UserProfile = {
-        id: 'admin-naufal',
-        name: 'Naufal Irfansyah (Superadmin)',
-        email: SUPERADMIN_EMAIL,
-        picture: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80',
-        plan: 'pro',
-        role: 'admin',
-      };
-      setUser(defaultAdmin);
-      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(defaultAdmin));
-      loadScopedData(defaultAdmin);
+      } catch {}
     }
 
-    setIsLoading(false);
+    // Listen to Supabase OAuth Session
+    if (isSupabaseConfigured && supabase) {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session?.user) {
+          const gUser = session.user;
+          const email = gUser.email || '';
+          const isAdmin = email.toLowerCase() === SUPERADMIN_EMAIL.toLowerCase();
+          const loggedUser: UserProfile = {
+            id: gUser.id,
+            email,
+            name: gUser.user_metadata?.full_name || gUser.user_metadata?.name || email.split('@')[0] || 'User',
+            picture: gUser.user_metadata?.avatar_url || gUser.user_metadata?.picture || '',
+            plan: isAdmin ? 'pro' : 'free',
+            role: isAdmin ? 'admin' : 'user',
+          };
+          setUser(loggedUser);
+          localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(loggedUser));
+          loadScopedData(loggedUser);
+        }
+        setIsLoading(false);
+      });
+
+      const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+        if (session?.user) {
+          const gUser = session.user;
+          const email = gUser.email || '';
+          const isAdmin = email.toLowerCase() === SUPERADMIN_EMAIL.toLowerCase();
+          const loggedUser: UserProfile = {
+            id: gUser.id,
+            email,
+            name: gUser.user_metadata?.full_name || gUser.user_metadata?.name || email.split('@')[0] || 'User',
+            picture: gUser.user_metadata?.avatar_url || gUser.user_metadata?.picture || '',
+            plan: isAdmin ? 'pro' : 'free',
+            role: isAdmin ? 'admin' : 'user',
+          };
+          setUser(loggedUser);
+          localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(loggedUser));
+          loadScopedData(loggedUser);
+          setShowPlanModal(true);
+        } else if (event === 'SIGNED_OUT') {
+          setUser(null);
+          localStorage.removeItem(STORAGE_KEYS.USER);
+        }
+      });
+
+      return () => {
+        authListener.subscription.unsubscribe();
+      };
+    } else {
+      setIsLoading(false);
+    }
   }, [loadScopedData]);
+
+  // Real Google Sign In via Supabase OAuth
+  const signInWithGoogle = useCallback(async () => {
+    if (isSupabaseConfigured && supabase) {
+      const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+      await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${origin}/auth/callback`,
+        },
+      });
+    } else {
+      if (typeof window !== 'undefined') {
+        const googleObj = (window as unknown as { google?: { accounts: { id: { prompt: () => void } } } }).google;
+        if (googleObj?.accounts?.id) {
+          googleObj.accounts.id.prompt();
+        }
+      }
+    }
+  }, []);
 
   // Set User Plan (Free vs Pro)
   const setUserPlan = useCallback((plan: UserPlan) => {
@@ -335,12 +391,15 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     setShowPlanModal(true);
   }, [loadScopedData]);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
     setUser(null);
     setTransactions([]);
     setAccounts([]);
     if (typeof window !== 'undefined') {
       localStorage.removeItem(STORAGE_KEYS.USER);
+    }
+    if (isSupabaseConfigured && supabase) {
+      await supabase.auth.signOut().catch(() => {});
     }
   }, []);
 
@@ -636,6 +695,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         showPlanModal,
         setShowPlanModal,
         setUserPlan,
+        signInWithGoogle,
         loginWithGoogleCredential,
         loginAsDemo,
         loginAsAdmin,

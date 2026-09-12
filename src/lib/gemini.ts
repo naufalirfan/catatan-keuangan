@@ -217,6 +217,12 @@ async function callCustomEndpoint(
   imageBase64?: string
 ): Promise<ParsedAiTransaction> {
   let endpoint = config.customEndpoint.trim();
+  if (endpoint.endsWith('/v1')) {
+    endpoint = `${endpoint}/chat/completions`;
+  } else if (!endpoint.includes('/chat/completions') && !endpoint.includes('generateContent')) {
+    endpoint = `${endpoint.replace(/\/+$/, '')}/chat/completions`;
+  }
+
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
@@ -225,38 +231,24 @@ async function callCustomEndpoint(
     headers['Authorization'] = `Bearer ${config.customAuthToken.trim()}`;
   }
 
-  // Check if endpoint is OpenAI-compatible /chat/completions or custom Gemini proxy
-  const isChatCompletions = endpoint.includes('/chat/completions') || !endpoint.includes('generateContent');
+  const messages = [
+    { role: 'system', content: SYSTEM_INSTRUCTION },
+    {
+      role: 'user',
+      content: imageBase64
+        ? [
+            { type: 'text', text: `Ekstrak transaksi dari struk ini. Input: ${input || ''}` },
+            { type: 'image_url', image_url: { url: imageBase64 } },
+          ]
+        : `Catat transaksi keuangan ini ke format JSON: "${input}"`,
+    },
+  ];
 
-  let body: unknown;
-  if (isChatCompletions) {
-    // OpenAI / Groq / OpenRouter / Ollama format
-    const messages = [
-      { role: 'system', content: SYSTEM_INSTRUCTION },
-      {
-        role: 'user',
-        content: imageBase64
-          ? [
-              { type: 'text', text: `Ekstrak transaksi dari struk ini. Input: ${input || ''}` },
-              { type: 'image_url', image_url: { url: imageBase64 } },
-            ]
-          : `Catat transaksi keuangan ini: "${input}"`,
-      },
-    ];
-
-    body = {
-      model: config.customModel || 'gpt-4o-mini',
-      messages,
-      temperature: 0.1,
-      response_format: { type: 'json_object' },
-    };
-  } else {
-    // Custom Gemini proxy format
-    body = {
-      contents: [{ parts: [{ text: `Catat transaksi keuangan ini: "${input}"` }] }],
-      systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
-    };
-  }
+  const body = {
+    model: config.customModel || 'jaa',
+    messages,
+    temperature: 0.1,
+  };
 
   const res = await fetch(endpoint, {
     method: 'POST',
@@ -269,35 +261,56 @@ async function callCustomEndpoint(
     throw new Error(`Custom Endpoint Error (${res.status}): ${errText}`);
   }
 
-  const data = await res.json();
+  const rawText = await res.text();
   let content = '';
 
-  if (data.choices?.[0]?.message?.content) {
-    content = data.choices[0].message.content;
-  } else if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
-    content = data.candidates[0].content.parts[0].text;
-  } else if (typeof data === 'object') {
-    content = JSON.stringify(data);
+  if (rawText.includes('data:')) {
+    // Parse SSE streaming chunks
+    const lines = rawText.split('\n');
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed.startsWith('data:') && !trimmed.includes('[DONE]')) {
+        try {
+          const jsonStr = trimmed.replace(/^data:\s*/, '');
+          const chunk = JSON.parse(jsonStr);
+          const delta = chunk.choices?.[0]?.delta?.content || chunk.choices?.[0]?.message?.content || '';
+          content += delta;
+        } catch {}
+      }
+    }
+  } else {
+    try {
+      const data = JSON.parse(rawText);
+      content = data.choices?.[0]?.message?.content || data.choices?.[0]?.text || '';
+    } catch {
+      content = rawText;
+    }
   }
 
-  // Clean json if wrapped in markdown ```json ... ```
-  const jsonMatch = content.match(/\{[\s\S]*\}/);
+  // Clean json if wrapped in markdown ```json ... ``` or plain text
+  const jsonMatch = content.match(/\{[\s\S]*?\}/);
   if (!jsonMatch) {
-    throw new Error('Tidak dapat menemukan format JSON dalam respon server');
+    // Fallback if model responded in free-form Indonesian text
+    const local = parseTransactionLocally(input || content);
+    return local;
   }
 
-  const parsed = JSON.parse(jsonMatch[0]);
-  return {
-    type: parsed.type || 'expense',
-    amount: Number(parsed.amount) || 0,
-    category: parsed.category || 'Pengeluaran Lainnya',
-    account: parsed.account || 'Uang Tunai (Dompet)',
-    to_account: parsed.to_account || undefined,
-    date: parsed.date || new Date().toISOString().split('T')[0],
-    note: parsed.note || input,
-    confidence: 0.95,
-    raw_text: input,
-  };
+  try {
+    const parsed = JSON.parse(jsonMatch[0]);
+    return {
+      type: parsed.type || 'expense',
+      amount: Number(parsed.amount) || 0,
+      category: parsed.category || 'Pengeluaran Lainnya',
+      account: parsed.account || 'Uang Tunai (Dompet)',
+      to_account: parsed.to_account || undefined,
+      date: parsed.date || new Date().toISOString().split('T')[0],
+      note: parsed.note || input,
+      confidence: 0.95,
+      raw_text: input,
+    };
+  } catch {
+    return parseTransactionLocally(input || content);
+  }
 }
 
 export async function testAiConnection(config: AiConfig): Promise<{ success: boolean; message: string; latencyMs: number }> {

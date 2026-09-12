@@ -116,6 +116,7 @@ const STORAGE_KEYS = {
 const DEFAULT_AI_CONFIG: AiConfig = {
   provider: 'custom',
   geminiApiKey: process.env.NEXT_PUBLIC_GEMINI_API_KEY || '',
+  geminiApiKeys: process.env.NEXT_PUBLIC_GEMINI_API_KEY ? [process.env.NEXT_PUBLIC_GEMINI_API_KEY] : [],
   geminiModel: 'gemini-1.5-flash',
   customEndpoint: process.env.NEXT_PUBLIC_AI_ENDPOINT || 'https://9router.naufalputra.my.id/v1',
   customAuthToken: process.env.NEXT_PUBLIC_AI_AUTH_TOKEN || 'sk-f7dc96564905d265-i8kpea-767a0d95',
@@ -277,6 +278,10 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
           ...DEFAULT_AI_CONFIG,
           ...parsed,
           provider: parsed.provider || 'custom',
+          geminiApiKey: parsed.geminiApiKey || DEFAULT_AI_CONFIG.geminiApiKey,
+          geminiApiKeys: Array.isArray(parsed.geminiApiKeys) && parsed.geminiApiKeys.length > 0 
+            ? parsed.geminiApiKeys 
+            : (parsed.geminiApiKey ? [parsed.geminiApiKey] : DEFAULT_AI_CONFIG.geminiApiKeys),
           customEndpoint: parsed.customEndpoint?.trim() || DEFAULT_AI_CONFIG.customEndpoint,
           customAuthToken: parsed.customAuthToken?.trim() || DEFAULT_AI_CONFIG.customAuthToken,
           customModel: parsed.customModel?.trim() || DEFAULT_AI_CONFIG.customModel,

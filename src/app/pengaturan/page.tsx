@@ -53,20 +53,34 @@ export default function PengaturanPage() {
 
   // Local form state for AI settings
   const [provider, setProvider] = useState<'gemini' | 'custom'>(aiConfig.provider || 'custom');
-  const [geminiApiKey, setGeminiApiKey] = useState(aiConfig.geminiApiKey || '');
+  const [geminiKeys, setGeminiKeys] = useState<string[]>(() => {
+    if (Array.isArray(aiConfig.geminiApiKeys) && aiConfig.geminiApiKeys.length > 0) {
+      return aiConfig.geminiApiKeys;
+    }
+    return aiConfig.geminiApiKey ? [aiConfig.geminiApiKey] : [''];
+  });
+  const [showGeminiKeys, setShowGeminiKeys] = useState<Record<number, boolean>>({});
+  const [geminiKeyStatuses, setGeminiKeyStatuses] = useState<
+    Record<number, { status: 'online' | 'offline' | 'warning'; latencyMs?: number; modelsCount?: number; topModel?: string; message: string }>
+  >({});
+  const [isCheckingGeminiKeys, setIsCheckingGeminiKeys] = useState(false);
+  const [checkingGeminiIndex, setCheckingGeminiIndex] = useState<number | null>(null);
+
   const [geminiModel, setGeminiModel] = useState(aiConfig.geminiModel || 'gemini-1.5-flash');
   const [customEndpoint, setCustomEndpoint] = useState(aiConfig.customEndpoint || 'https://9router.naufalputra.my.id/v1');
   const [customAuthToken, setCustomAuthToken] = useState(aiConfig.customAuthToken || '');
   const [customModel, setCustomModel] = useState(aiConfig.customModel || 'joo');
   const [customFallbackModel, setCustomFallbackModel] = useState(aiConfig.customFallbackModel || 'jaa');
 
-  const [showGeminiKey, setShowGeminiKey] = useState(false);
   const [showCustomToken, setShowCustomToken] = useState(false);
 
   // Synchronize state when aiConfig loads or updates
   useEffect(() => {
     setProvider(aiConfig.provider || 'custom');
-    setGeminiApiKey(aiConfig.geminiApiKey || '');
+    const keys = Array.isArray(aiConfig.geminiApiKeys) && aiConfig.geminiApiKeys.length > 0
+      ? aiConfig.geminiApiKeys
+      : (aiConfig.geminiApiKey ? [aiConfig.geminiApiKey] : ['']);
+    setGeminiKeys(keys);
     setGeminiModel(aiConfig.geminiModel || 'gemini-1.5-flash');
     setCustomEndpoint(aiConfig.customEndpoint || 'https://9router.naufalputra.my.id/v1');
     setCustomAuthToken(aiConfig.customAuthToken || '');
@@ -165,10 +179,141 @@ export default function PengaturanPage() {
     }
   };
 
+  const handleAddGeminiKey = () => {
+    setGeminiKeys((prev) => [...prev, '']);
+  };
+
+  const handleRemoveGeminiKey = (index: number) => {
+    setGeminiKeys((prev) => {
+      const next = prev.filter((_, i) => i !== index);
+      return next.length > 0 ? next : [''];
+    });
+    setGeminiKeyStatuses((prev) => {
+      const next = { ...prev };
+      delete next[index];
+      return next;
+    });
+  };
+
+  const handleGeminiKeyChange = (index: number, val: string) => {
+    setGeminiKeys((prev) => {
+      const next = [...prev];
+      next[index] = val;
+      return next;
+    });
+    if (geminiKeyStatuses[index]) {
+      setGeminiKeyStatuses((prev) => {
+        const next = { ...prev };
+        delete next[index];
+        return next;
+      });
+    }
+  };
+
+  const toggleShowGeminiKey = (index: number) => {
+    setShowGeminiKeys((prev) => ({ ...prev, [index]: !prev[index] }));
+  };
+
+  const checkSingleGeminiKey = async (index: number) => {
+    const key = geminiKeys[index]?.trim();
+    if (!key) {
+      alert('Masukkan Gemini API Key terlebih dahulu.');
+      return;
+    }
+
+    setCheckingGeminiIndex(index);
+    try {
+      const res = await fetch('/api/ai-models', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'check-gemini-keys',
+          keys: [key],
+        }),
+      });
+      const data = await res.json();
+      if (Array.isArray(data.results) && data.results[0]) {
+        const r = data.results[0];
+        setGeminiKeyStatuses((prev) => ({
+          ...prev,
+          [index]: {
+            status: r.status,
+            latencyMs: r.latencyMs,
+            modelsCount: r.modelsCount,
+            topModel: r.topModel,
+            message: r.message,
+          },
+        }));
+      }
+    } catch {
+      setGeminiKeyStatuses((prev) => ({
+        ...prev,
+        [index]: {
+          status: 'offline',
+          message: 'Gagal menghubungi server untuk verifikasi key',
+        },
+      }));
+    } finally {
+      setCheckingGeminiIndex(null);
+    }
+  };
+
+  const checkAllGeminiKeys = async () => {
+    const validIndexes: number[] = [];
+    const keysToTest: string[] = [];
+
+    geminiKeys.forEach((k, idx) => {
+      if (k.trim()) {
+        validIndexes.push(idx);
+        keysToTest.push(k.trim());
+      }
+    });
+
+    if (keysToTest.length === 0) {
+      alert('Tidak ada Gemini API Key yang terisi untuk diuji.');
+      return;
+    }
+
+    setIsCheckingGeminiKeys(true);
+    try {
+      const res = await fetch('/api/ai-models', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'check-gemini-keys',
+          keys: keysToTest,
+        }),
+      });
+      const data = await res.json();
+      if (Array.isArray(data.results)) {
+        const nextStatuses = { ...geminiKeyStatuses };
+        data.results.forEach((r: { status: 'online' | 'offline' | 'warning'; latencyMs?: number; modelsCount?: number; topModel?: string; message: string }, i: number) => {
+          const originalIdx = validIndexes[i];
+          if (originalIdx !== undefined) {
+            nextStatuses[originalIdx] = {
+              status: r.status,
+              latencyMs: r.latencyMs,
+              modelsCount: r.modelsCount,
+              topModel: r.topModel,
+              message: r.message,
+            };
+          }
+        });
+        setGeminiKeyStatuses(nextStatuses);
+      }
+    } catch {
+      alert('Terjadi kesalahan saat memeriksa Gemini API Keys.');
+    } finally {
+      setIsCheckingGeminiKeys(false);
+    }
+  };
+
   const handleSaveAiSettings = () => {
+    const cleanedKeys = geminiKeys.map((k) => k.trim()).filter(Boolean);
     updateAiConfig({
       provider,
-      geminiApiKey: geminiApiKey.trim(),
+      geminiApiKey: cleanedKeys[0] || '',
+      geminiApiKeys: cleanedKeys,
       geminiModel,
       customEndpoint: customEndpoint.trim(),
       customAuthToken: customAuthToken.trim(),
@@ -180,7 +325,7 @@ export default function PengaturanPage() {
       success: true,
       message:
         provider === 'gemini'
-          ? `Pengaturan disimpan! AI sekarang AKTIF menggunakan Google Gemini (${geminiModel || 'gemini-1.5-flash'}).`
+          ? `Pengaturan disimpan! AI sekarang AKTIF menggunakan Google Gemini (${geminiModel || 'gemini-1.5-flash'}) dengan ${cleanedKeys.length} token terdaftar.`
           : `Pengaturan disimpan! AI sekarang AKTIF menggunakan Custom Endpoint (${customModel || 'jaa'}).`,
     });
     setTimeout(() => setSaveSuccess(false), 3000);
@@ -190,9 +335,11 @@ export default function PengaturanPage() {
     setIsTesting(true);
     setTestResult(null);
 
+    const cleanedKeys = geminiKeys.map((k) => k.trim()).filter(Boolean);
     const tempConfig = {
       provider,
-      geminiApiKey: geminiApiKey.trim(),
+      geminiApiKey: cleanedKeys[0] || '',
+      geminiApiKeys: cleanedKeys,
       geminiModel,
       customEndpoint: customEndpoint.trim(),
       customAuthToken: customAuthToken.trim(),
@@ -200,10 +347,10 @@ export default function PengaturanPage() {
       customFallbackModel: customFallbackModel.trim(),
     };
 
-    // Jalankan test AI sekaligus cek status kesehatan model
+    // Jalankan test AI sekaligus cek status kesehatan token / model
     const [res] = await Promise.all([
       testAiConnection(tempConfig),
-      checkModelsHealth(),
+      provider === 'gemini' ? checkAllGeminiKeys() : checkModelsHealth(),
     ]);
 
     setTestResult(res);
@@ -363,46 +510,167 @@ export default function PengaturanPage() {
 
         {/* Gemini Provider Fields */}
         {provider === 'gemini' ? (
-          <div className="space-y-3 pt-1">
-            <div className="space-y-1">
-              <div className="flex items-center justify-between text-xs">
-                <label className="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+          <div className="space-y-4 pt-1">
+            {/* Header with Title and "Tes Semua Token" */}
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div>
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1">
                   <Key className="w-3.5 h-3.5 text-emerald-500" />
-                  Gemini API Key
+                  Daftar Gemini API Key (Multi-Token)
                 </label>
+                <p className="text-[10px] text-slate-400">
+                  Mendukung banyak token. Jika Token 1 kena limit 429, otomatis berganti ke Token cadangan berikutnya.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={checkAllGeminiKeys}
+                  disabled={isCheckingGeminiKeys || geminiKeys.every((k) => !k.trim())}
+                  className="px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition-colors flex items-center gap-1 disabled:opacity-50"
+                  title="Uji semua API Key yang telah dimasukkan"
+                >
+                  {isCheckingGeminiKeys ? (
+                    <Loader2 className="w-3 h-3 animate-spin text-emerald-600" />
+                  ) : (
+                    <Activity className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                  )}
+                  Tes Semua Token
+                </button>
                 <a
                   href="https://aistudio.google.com/app/apikey"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-[11px] text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-0.5"
                 >
-                  Dapatkan Gratis <ExternalLink className="w-3 h-3" />
+                  Dapatkan Key Gratis <ExternalLink className="w-3 h-3" />
                 </a>
               </div>
-
-              <div className="relative">
-                <input
-                  type={showGeminiKey ? 'text' : 'password'}
-                  value={geminiApiKey}
-                  onChange={(e) => setGeminiApiKey(e.target.value)}
-                  placeholder="Contoh: AIzaSyD..."
-                  className="w-full px-3 py-2.5 pr-10 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowGeminiKey(!showGeminiKey)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                >
-                  {showGeminiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-              <p className="text-[10px] text-slate-400">
-                API Key disimpan secara privat di perangkat Anda.
-              </p>
-              <p className="text-[10px] text-amber-600 dark:text-amber-400">
-                💡 <b>Tips Penting</b>: Pastikan membuat API Key melalui <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="underline font-bold">Google AI Studio</a> (bukan Google Cloud Console biasa) agar model Gemini 1.5 Flash langsung aktif gratis tanpa perlu setel project Cloud.
-              </p>
             </div>
+
+            {/* List of Token Inputs */}
+            <div className="space-y-2.5">
+              {geminiKeys.map((keyVal, idx) => {
+                const statusInfo = geminiKeyStatuses[idx];
+                const isThisChecking = checkingGeminiIndex === idx;
+                const isPrimary = idx === 0;
+
+                return (
+                  <div
+                    key={idx}
+                    className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40 space-y-2"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                          isPrimary
+                            ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800'
+                            : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700'
+                        }`}>
+                          {isPrimary ? '🔑 Token #1 (Utama)' : `🔁 Token #${idx + 1} (Cadangan / Fallback)`}
+                        </span>
+
+                        {/* Status Badge */}
+                        {statusInfo && (
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold ${
+                            statusInfo.status === 'online'
+                              ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800'
+                              : statusInfo.status === 'warning'
+                              ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800'
+                              : 'bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800'
+                          }`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${
+                              statusInfo.status === 'online'
+                                ? 'bg-emerald-500 animate-pulse'
+                                : statusInfo.status === 'warning'
+                                ? 'bg-amber-500'
+                                : 'bg-rose-500'
+                            }`} />
+                            {statusInfo.status === 'online'
+                              ? `Online (${statusInfo.latencyMs}ms)`
+                              : statusInfo.status === 'warning'
+                              ? 'Perhatian'
+                              : 'Tidak Aktif / Error'}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Action buttons on the right */}
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => checkSingleGeminiKey(idx)}
+                          disabled={isThisChecking || !keyVal.trim()}
+                          className="px-2 py-1 rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[10px] font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors flex items-center gap-1 disabled:opacity-40"
+                          title="Tes hanya token ini"
+                        >
+                          {isThisChecking ? (
+                            <Loader2 className="w-2.5 h-2.5 animate-spin text-emerald-500" />
+                          ) : (
+                            <CheckCircle2 className="w-2.5 h-2.5 text-emerald-500" />
+                          )}
+                          Tes Token
+                        </button>
+
+                        {geminiKeys.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveGeminiKey(idx)}
+                            className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors"
+                            title="Hapus token ini"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="relative">
+                      <input
+                        type={showGeminiKeys[idx] ? 'text' : 'password'}
+                        value={keyVal}
+                        onChange={(e) => handleGeminiKeyChange(idx, e.target.value)}
+                        placeholder={`Masukkan Gemini API Key #${idx + 1} (AIzaSy...)`}
+                        className="w-full px-3 py-2 pr-10 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => toggleShowGeminiKey(idx)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                        title={showGeminiKeys[idx] ? 'Sembunyikan' : 'Lihat'}
+                      >
+                        {showGeminiKeys[idx] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+
+                    {/* Status diagnostic message if tested */}
+                    {statusInfo && (
+                      <p className={`text-[10px] font-medium ${
+                        statusInfo.status === 'online'
+                          ? 'text-emerald-600 dark:text-emerald-400'
+                          : statusInfo.status === 'warning'
+                          ? 'text-amber-600 dark:text-amber-400'
+                          : 'text-rose-600 dark:text-rose-400'
+                      }`}>
+                        {statusInfo.status === 'online' ? '✓ ' : '✕ '}
+                        {statusInfo.message}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Button to Add More Gemini API Keys */}
+            <button
+              type="button"
+              onClick={handleAddGeminiKey}
+              className="w-full py-2.5 px-3 rounded-xl border border-dashed border-emerald-300 dark:border-emerald-800 hover:border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              + Tambah Token Gemini Cadangan (Fallback)
+            </button>
 
             <div className="space-y-1">
               <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
@@ -419,6 +687,10 @@ export default function PengaturanPage() {
                 <option value="gemini-1.5-pro">Gemini 1.5 Pro (Akurasi Maksimal)</option>
               </select>
             </div>
+
+            <p className="text-[10px] text-amber-600 dark:text-amber-400">
+              💡 <b>Tips Penting</b>: Pastikan membuat API Key melalui <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="underline font-bold">Google AI Studio</a> (bukan Google Cloud Console biasa) agar model Gemini 1.5 Flash langsung aktif gratis tanpa perlu setel project Cloud. Anda bisa menambahkan beberapa API Key dari akun Google yang berbeda untuk kuota gratis berlipat ganda!
+            </p>
           </div>
         ) : (
           /* Custom Endpoint Fields */

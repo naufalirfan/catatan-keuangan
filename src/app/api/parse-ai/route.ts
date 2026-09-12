@@ -134,101 +134,114 @@ export async function POST(req: NextRequest) {
     // 1. If provider is Gemini, call official Google Gemini API with smart model discovery
     const isGemini = config?.provider === 'gemini';
     if (isGemini) {
-      const apiKey = config?.geminiApiKey?.trim() || process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
-      if (!apiKey) {
+      const candidateKeys: string[] = [];
+      if (Array.isArray(config?.geminiApiKeys)) {
+        config.geminiApiKeys.forEach((k: unknown) => {
+          if (typeof k === 'string' && k.trim()) {
+            const trimmed = k.trim();
+            if (!candidateKeys.includes(trimmed)) candidateKeys.push(trimmed);
+          }
+        });
+      }
+      if (config?.geminiApiKey && typeof config.geminiApiKey === 'string') {
+        config.geminiApiKey.split(/[\n,]+/).forEach((k: string) => {
+          const trimmed = k.trim();
+          if (trimmed && !candidateKeys.includes(trimmed)) candidateKeys.push(trimmed);
+        });
+      }
+      const envKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+      if (candidateKeys.length === 0 && envKey) {
+        candidateKeys.push(envKey.trim());
+      }
+
+      if (candidateKeys.length === 0) {
         return NextResponse.json({ error: 'Gemini API Key belum diisi. Silakan masukkan di menu Pengaturan.' }, { status: 400 });
       }
 
       const requestedModel = config?.geminiModel?.trim() || 'gemini-1.5-flash';
+      let geminiSuccessResponse: string | null = null;
+      let successfulGeminiModel = requestedModel;
+      let successfulKeyIndex = 0;
+      let lastGeminiError = '';
 
-      // 1. First, check available models directly via ListModels to know exactly what this API key has access to!
-      let availableModels: string[] = [];
-      let listModelsError = '';
+      // Build prompt once
+      const userPrompt = imageBase64
+        ? `Ini adalah gambar struk/nota belanja. Analisis total harga/nominal akhir yang dibayarkan, nama toko/merchant, tanggal, dan rincian transaksi. Kembalikan HANYA JSON: {"type": "expense", "amount": 0, "category": "Belanja & Kebutuhan", "note": "Nama Toko", "date": "YYYY-MM-DD"}. Catatan user: ${input || ''}`
+        : `${SYSTEM_INSTRUCTION}\n\nCatat transaksi keuangan ini ke format JSON:\n"${input}"`;
 
-      for (const ver of ['v1beta', 'v1']) {
-        try {
-          const listRes = await fetch(`https://generativelanguage.googleapis.com/${ver}/models?key=${apiKey}`, {
-            signal: AbortSignal.timeout(10000),
+      const parts: Array<Record<string, unknown>> = [];
+      if (imageBase64) {
+        const match = imageBase64.match(/^data:(image\/[a-zA-Z+]+);base64,(.+)$/);
+        if (match) {
+          parts.push({
+            inlineData: {
+              mimeType: match[1],
+              data: match[2],
+            },
           });
-          if (listRes.ok) {
-            const listData = await listRes.json();
-            const supported = (listData.models || [])
-              .filter((m: { supportedGenerationMethods?: string[] }) => m.supportedGenerationMethods?.includes('generateContent'))
-              .map((m: { name: string }) => m.name.replace(/^models\//, ''));
-            if (supported.length > 0) {
-              availableModels = supported;
-              break;
-            }
-          } else {
-            const errText = await listRes.text();
-            let msg = errText;
-            try {
-              msg = JSON.parse(errText).error?.message || errText;
-            } catch {}
-            listModelsError = `(${listRes.status}): ${msg}`;
-            if (listRes.status === 400 || listRes.status === 403) {
-              break;
-            }
-          }
-        } catch (e: unknown) {
-          listModelsError = e instanceof Error ? e.message : String(e);
         }
       }
+      parts.push({ text: userPrompt });
 
-      // If ListModels failed or returned 0 models:
-      if (availableModels.length === 0) {
-        if (config?.isTest) {
-          return NextResponse.json(
-            {
-              error: `Google Gemini API Key tidak dapat mengakses model. Respon Google: ${listModelsError || 'Tidak ada model generateContent yang aktif'}. Pastikan API Key dibuat melalui Google AI Studio (aistudio.google.com/app/apikey) dan Generative Language API aktif.`,
-            },
-            { status: 400 }
-          );
-        }
-        console.warn('ListModels failed, falling back to custom router...');
-      } else {
-        // We have the exact list of available models for this key!
-        let targetModel = requestedModel;
-        if (!availableModels.includes(targetModel)) {
-          const fallbackMatch = availableModels.find((m: string) => m.includes('flash') || m.includes('pro')) || availableModels[0];
-          targetModel = fallbackMatch;
-        }
+      const requestBody = {
+        contents: [{ parts }],
+        generationConfig: {
+          temperature: 0.1,
+        },
+      };
 
-        // Build prompt (embed system instruction in prompt for 100% universal compatibility across all Gemini endpoints)
-        const userPrompt = imageBase64
-          ? `Ini adalah gambar struk/nota belanja. Analisis total harga/nominal akhir yang dibayarkan, nama toko/merchant, tanggal, dan rincian transaksi. Kembalikan HANYA JSON: {"type": "expense", "amount": 0, "category": "Belanja & Kebutuhan", "note": "Nama Toko", "date": "YYYY-MM-DD"}. Catatan user: ${input || ''}`
-          : `${SYSTEM_INSTRUCTION}\n\nCatat transaksi keuangan ini ke format JSON:\n"${input}"`;
+      // Loop through all provided Gemini tokens (Token 1, Token 2, Token 3...)
+      for (let kIdx = 0; kIdx < candidateKeys.length; kIdx++) {
+        const currentApiKey = candidateKeys[kIdx];
 
-        const parts: Array<Record<string, unknown>> = [];
-        if (imageBase64) {
-          const match = imageBase64.match(/^data:(image\/[a-zA-Z+]+);base64,(.+)$/);
-          if (match) {
-            parts.push({
-              inlineData: {
-                mimeType: match[1],
-                data: match[2],
-              },
+        // 1. Check available models for this specific key
+        let availableModels: string[] = [];
+        let listModelsError = '';
+
+        for (const ver of ['v1beta', 'v1']) {
+          try {
+            const listRes = await fetch(`https://generativelanguage.googleapis.com/${ver}/models?key=${currentApiKey}`, {
+              signal: AbortSignal.timeout(10000),
             });
+            if (listRes.ok) {
+              const listData = await listRes.json();
+              const supported = (listData.models || [])
+                .filter((m: { supportedGenerationMethods?: string[] }) => m.supportedGenerationMethods?.includes('generateContent'))
+                .map((m: { name: string }) => m.name.replace(/^models\//, ''));
+              if (supported.length > 0) {
+                availableModels = supported;
+                break;
+              }
+            } else {
+              const errText = await listRes.text();
+              let msg = errText;
+              try {
+                msg = JSON.parse(errText).error?.message || errText;
+              } catch {}
+              listModelsError = `(${listRes.status}): ${msg}`;
+            }
+          } catch (e: unknown) {
+            listModelsError = e instanceof Error ? e.message : String(e);
           }
         }
-        parts.push({ text: userPrompt });
 
-        const requestBody = {
-          contents: [{ parts }],
-          generationConfig: {
-            temperature: 0.1,
-          },
-        };
-
-        const modelsToTry = [targetModel, ...availableModels.filter((m: string) => m !== targetModel)];
-        let geminiSuccessResponse: string | null = null;
-        let successfulGeminiModel = targetModel;
-        let lastGeminiError = '';
+        const modelsToTry = availableModels.length > 0
+          ? [
+              availableModels.includes(requestedModel) ? requestedModel : availableModels[0],
+              ...availableModels.filter((m: string) => m !== requestedModel),
+            ]
+          : [
+              requestedModel,
+              'gemini-1.5-flash',
+              'gemini-2.0-flash',
+              'gemini-1.5-flash-8b',
+              'gemini-1.5-pro',
+            ];
 
         for (const cand of modelsToTry) {
           for (const ver of ['v1beta', 'v1']) {
             try {
-              const url = `https://generativelanguage.googleapis.com/${ver}/models/${cand}:generateContent?key=${apiKey}`;
+              const url = `https://generativelanguage.googleapis.com/${ver}/models/${cand}:generateContent?key=${currentApiKey}`;
               const res = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -242,6 +255,7 @@ export async function POST(req: NextRequest) {
                 if (raw) {
                   geminiSuccessResponse = raw;
                   successfulGeminiModel = cand;
+                  successfulKeyIndex = kIdx;
                   break;
                 }
               } else {
@@ -250,34 +264,43 @@ export async function POST(req: NextRequest) {
                 try {
                   msg = JSON.parse(errText).error?.message || errText;
                 } catch {}
-                lastGeminiError = `(${res.status}): ${msg}`;
+                lastGeminiError = `Token #${kIdx + 1} (${res.status}): ${msg}`;
               }
             } catch (e: unknown) {
-              lastGeminiError = e instanceof Error ? e.message : String(e);
+              lastGeminiError = `Token #${kIdx + 1}: ` + (e instanceof Error ? e.message : String(e));
             }
           }
           if (geminiSuccessResponse) break;
         }
 
-        if (geminiSuccessResponse) {
-          const result = extractTransaction(geminiSuccessResponse, input);
-          return NextResponse.json({
-            ...result,
-            _provider: 'gemini',
-            _usedModel: successfulGeminiModel,
-            _isFallback: false,
-          });
-        }
+        // If this token succeeded, don't need to try subsequent fallback tokens!
+        if (geminiSuccessResponse) break;
 
-        if (config?.isTest) {
-          return NextResponse.json(
-            { error: `Koneksi Google Gemini gagal pada model [${targetModel}]: ${lastGeminiError}. Model tersedia pada akun/key Anda: ${availableModels.slice(0, 5).join(', ')}` },
-            { status: 400 }
-          );
-        }
-
-        console.warn('Gemini calls failed, falling back to default router...');
+        // If this token failed (e.g. rate limit 429 or quota exceeded), log and try next candidate key
+        console.warn(`Gemini Token #${kIdx + 1} failed: ${lastGeminiError}. Mencoba token cadangan berikutnya...`);
       }
+
+      if (geminiSuccessResponse) {
+        const result = extractTransaction(geminiSuccessResponse, input);
+        return NextResponse.json({
+          ...result,
+          _provider: 'gemini',
+          _usedModel: successfulGeminiModel,
+          _keyIndex: successfulKeyIndex,
+          _isFallback: successfulKeyIndex > 0,
+        });
+      }
+
+      if (config?.isTest) {
+        return NextResponse.json(
+          {
+            error: `Koneksi Google Gemini gagal di semua (${candidateKeys.length}) token yang diuji. Error terakhir: ${lastGeminiError}. Pastikan API Key valid dan dibuat dari Google AI Studio (aistudio.google.com/app/apikey).`,
+          },
+          { status: 400 }
+        );
+      }
+
+      console.warn('All Gemini tokens failed, falling back to custom router...');
     }
 
     // 2. Custom Endpoint (e.g. OpenAI / 9Router)

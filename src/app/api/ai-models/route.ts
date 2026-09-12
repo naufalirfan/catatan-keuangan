@@ -131,6 +131,83 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ results: checks });
     }
 
+    // ACTION 3: Cek status dan validitas beberapa Gemini API Key
+    if (action === 'check-gemini-keys') {
+      const keys: string[] = Array.isArray(body.keys) ? body.keys.filter(Boolean) : [];
+      if (keys.length === 0) {
+        return NextResponse.json({ error: 'Tidak ada API Key yang diperiksa' }, { status: 400 });
+      }
+
+      const results = await Promise.all(
+        keys.map(async (key: string, index: number) => {
+          const start = performance.now();
+          const cleanKey = key.trim();
+          try {
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${cleanKey}`, {
+              signal: AbortSignal.timeout(12000),
+            });
+            const latencyMs = Math.round(performance.now() - start);
+
+            if (res.ok) {
+              const data = await res.json();
+              const supported = (data.models || [])
+                .filter((m: { supportedGenerationMethods?: string[] }) => m.supportedGenerationMethods?.includes('generateContent'))
+                .map((m: { name: string }) => m.name.replace(/^models\//, ''));
+
+              if (supported.length > 0) {
+                return {
+                  index,
+                  key: cleanKey,
+                  status: 'online' as const,
+                  latencyMs,
+                  modelsCount: supported.length,
+                  topModel: supported[0],
+                  message: `Aktif (${supported.length} model: ${supported.slice(0, 2).join(', ')})`,
+                };
+              } else {
+                return {
+                  index,
+                  key: cleanKey,
+                  status: 'warning' as const,
+                  latencyMs,
+                  message: 'Key valid tapi belum ada model generateContent aktif',
+                };
+              }
+            } else {
+              const errText = await res.text();
+              let msg = `HTTP ${res.status}`;
+              try {
+                msg = JSON.parse(errText).error?.message || errText;
+              } catch {}
+              if (res.status === 400 || msg.includes('API_KEY_INVALID')) msg = 'API Key tidak valid (400)';
+              else if (res.status === 403) msg = 'Akses ditolak / belum aktif (403)';
+              else if (res.status === 429) msg = 'Batas kuota habis (429 Rate Limit)';
+
+              return {
+                index,
+                key: cleanKey,
+                status: 'offline' as const,
+                latencyMs,
+                message: msg,
+              };
+            }
+          } catch (e: unknown) {
+            const latencyMs = Math.round(performance.now() - start);
+            const msg = e instanceof Error ? e.message : String(e);
+            return {
+              index,
+              key: cleanKey,
+              status: 'offline' as const,
+              latencyMs,
+              message: msg.includes('timeout') ? 'Waktu habis (>12s)' : 'Gagal terhubung',
+            };
+          }
+        })
+      );
+
+      return NextResponse.json({ results });
+    }
+
     return NextResponse.json({ error: 'Action tidak valid' }, { status: 400 });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);

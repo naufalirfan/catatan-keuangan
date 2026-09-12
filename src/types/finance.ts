@@ -50,6 +50,7 @@ export interface Budget {
 export interface AiConfig {
   provider: 'gemini' | 'custom';
   geminiApiKey: string;
+  geminiApiKeys?: string[];
   geminiModel: string;
   customEndpoint: string;
   customAuthToken: string;

@@ -172,9 +172,23 @@ async function callGeminiApi(
   config: AiConfig,
   imageBase64?: string
 ): Promise<ParsedAiTransaction> {
-  const model = config.geminiModel || 'gemini-1.5-flash';
-  const apiKey = config.geminiApiKey?.trim();
-  if (!apiKey) {
+  const candidateKeys: string[] = [];
+  if (Array.isArray(config.geminiApiKeys)) {
+    config.geminiApiKeys.forEach((k) => {
+      if (typeof k === 'string' && k.trim()) {
+        const trimmed = k.trim();
+        if (!candidateKeys.includes(trimmed)) candidateKeys.push(trimmed);
+      }
+    });
+  }
+  if (config.geminiApiKey && typeof config.geminiApiKey === 'string') {
+    config.geminiApiKey.split(/[\n,]+/).forEach((k) => {
+      const trimmed = k.trim();
+      if (trimmed && !candidateKeys.includes(trimmed)) candidateKeys.push(trimmed);
+    });
+  }
+
+  if (candidateKeys.length === 0) {
     throw new Error('API Key Gemini belum diisi. Silakan masukkan di menu Pengaturan.');
   }
 
@@ -226,33 +240,37 @@ async function callGeminiApi(
   let rawResponse = '';
   let lastErrorMsg = '';
 
-  for (const cand of modelCandidates) {
-    for (const ver of ['v1', 'v1beta']) {
-      try {
-        const url = `https://generativelanguage.googleapis.com/${ver}/models/${cand}:generateContent?key=${apiKey}`;
-        const res = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(requestBody),
-        });
+  for (let kIdx = 0; kIdx < candidateKeys.length; kIdx++) {
+    const apiKey = candidateKeys[kIdx];
+    for (const cand of modelCandidates) {
+      for (const ver of ['v1', 'v1beta']) {
+        try {
+          const url = `https://generativelanguage.googleapis.com/${ver}/models/${cand}:generateContent?key=${apiKey}`;
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestBody),
+          });
 
-        if (res.ok) {
-          const data = await res.json();
-          rawResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-          if (rawResponse) break;
-        } else {
-          const errText = await res.text();
-          let detail = errText;
-          try {
-            const errObj = JSON.parse(errText);
-            detail = errObj.error?.message || errText;
-          } catch {}
-          lastErrorMsg = `(${res.status}): ${detail}`;
-          if (res.status === 400 || res.status === 403) break;
+          if (res.ok) {
+            const data = await res.json();
+            rawResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            if (rawResponse) break;
+          } else {
+            const errText = await res.text();
+            let detail = errText;
+            try {
+              const errObj = JSON.parse(errText);
+              detail = errObj.error?.message || errText;
+            } catch {}
+            lastErrorMsg = `Token #${kIdx + 1} (${res.status}): ${detail}`;
+            if (res.status === 400 || res.status === 403) break;
+          }
+        } catch (e: unknown) {
+          lastErrorMsg = e instanceof Error ? e.message : String(e);
         }
-      } catch (e: unknown) {
-        lastErrorMsg = e instanceof Error ? e.message : String(e);
       }
+      if (rawResponse) break;
     }
     if (rawResponse) break;
   }

@@ -162,7 +162,8 @@ export async function POST(req: NextRequest) {
                   latencyMs,
                   modelsCount: supported.length,
                   topModel: supported[0],
-                  message: `Aktif (${supported.length} model: ${supported.slice(0, 2).join(', ')})`,
+                  models: supported,
+                  message: `Aktif (${supported.length} model: ${supported.slice(0, 3).join(', ')})`,
                 };
               } else {
                 return {

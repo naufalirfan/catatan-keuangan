@@ -65,8 +65,9 @@ export default function PengaturanPage() {
   >({});
   const [isCheckingGeminiKeys, setIsCheckingGeminiKeys] = useState(false);
   const [checkingGeminiIndex, setCheckingGeminiIndex] = useState<number | null>(null);
+  const [availableGeminiModels, setAvailableGeminiModels] = useState<string[]>([]);
 
-  const [geminiModel, setGeminiModel] = useState(aiConfig.geminiModel || 'gemini-1.5-flash');
+  const [geminiModel, setGeminiModel] = useState(aiConfig.geminiModel || 'gemini-2.5-flash');
   const [customEndpoint, setCustomEndpoint] = useState(aiConfig.customEndpoint || 'https://9router.naufalputra.my.id/v1');
   const [customAuthToken, setCustomAuthToken] = useState(aiConfig.customAuthToken || '');
   const [customModel, setCustomModel] = useState(aiConfig.customModel || 'joo');
@@ -244,6 +245,14 @@ export default function PengaturanPage() {
             message: r.message,
           },
         }));
+
+        if (Array.isArray(r.models) && r.models.length > 0) {
+          setAvailableGeminiModels((prev) => Array.from(new Set([...prev, ...r.models])));
+          if (!r.models.includes(geminiModel)) {
+            const best = r.models.find((m: string) => m.includes('2.5-flash')) || r.models.find((m: string) => m.includes('flash')) || r.models[0];
+            if (best) setGeminiModel(best);
+          }
+        }
       }
     } catch {
       setGeminiKeyStatuses((prev) => ({
@@ -287,7 +296,8 @@ export default function PengaturanPage() {
       const data = await res.json();
       if (Array.isArray(data.results)) {
         const nextStatuses = { ...geminiKeyStatuses };
-        data.results.forEach((r: { status: 'online' | 'offline' | 'warning'; latencyMs?: number; modelsCount?: number; topModel?: string; message: string }, i: number) => {
+        const allDiscovered: string[] = [];
+        data.results.forEach((r: { status: 'online' | 'offline' | 'warning'; latencyMs?: number; modelsCount?: number; topModel?: string; message: string; models?: string[] }, i: number) => {
           const originalIdx = validIndexes[i];
           if (originalIdx !== undefined) {
             nextStatuses[originalIdx] = {
@@ -298,8 +308,20 @@ export default function PengaturanPage() {
               message: r.message,
             };
           }
+          if (Array.isArray(r.models)) {
+            allDiscovered.push(...r.models);
+          }
         });
         setGeminiKeyStatuses(nextStatuses);
+
+        if (allDiscovered.length > 0) {
+          const unique = Array.from(new Set(allDiscovered));
+          setAvailableGeminiModels(unique);
+          if (!unique.includes(geminiModel)) {
+            const best = unique.find((m: string) => m.includes('2.5-flash')) || unique.find((m: string) => m.includes('flash')) || unique[0];
+            if (best) setGeminiModel(best);
+          }
+        }
       }
     } catch {
       alert('Terjadi kesalahan saat memeriksa Gemini API Keys.');
@@ -325,7 +347,7 @@ export default function PengaturanPage() {
       success: true,
       message:
         provider === 'gemini'
-          ? `Pengaturan disimpan! AI sekarang AKTIF menggunakan Google Gemini (${geminiModel || 'gemini-1.5-flash'}) dengan ${cleanedKeys.length} token terdaftar.`
+          ? `Pengaturan disimpan! AI sekarang AKTIF menggunakan Google Gemini (${geminiModel}) dengan ${cleanedKeys.length} token terdaftar.`
           : `Pengaturan disimpan! AI sekarang AKTIF menggunakan Custom Endpoint (${customModel || 'jaa'}).`,
     });
     setTimeout(() => setSaveSuccess(false), 3000);
@@ -352,6 +374,11 @@ export default function PengaturanPage() {
       testAiConnection(tempConfig),
       provider === 'gemini' ? checkAllGeminiKeys() : checkModelsHealth(),
     ]);
+
+    if (res.success && res.usedModel && provider === 'gemini') {
+      setGeminiModel(res.usedModel);
+      updateAiConfig({ geminiModel: res.usedModel });
+    }
 
     setTestResult(res);
     setIsTesting(false);
@@ -679,14 +706,24 @@ export default function PengaturanPage() {
               <select
                 value={geminiModel}
                 onChange={(e) => setGeminiModel(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white"
+                className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white"
               >
-                <option value="gemini-2.5-flash">Gemini 2.5 Flash (Generasi Super Cepat Terbaru - Rekomendasi)</option>
-                <option value="gemini-2.0-flash">Gemini 2.0 Flash (Generasi Terbaru)</option>
-                <option value="gemini-1.5-flash">Gemini 1.5 Flash (Sangat Cepat & Populer)</option>
-                <option value="gemini-1.5-flash-8b">Gemini 1.5 Flash 8B (Ultra Ringan)</option>
-                <option value="gemini-2.5-pro">Gemini 2.5 Pro (Akurasi Maksimal)</option>
-                <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+                {availableGeminiModels.length > 0 ? (
+                  availableGeminiModels.map((m) => (
+                    <option key={m} value={m}>
+                      {m} {m === geminiModel ? '★ (Aktif)' : ''}
+                    </option>
+                  ))
+                ) : (
+                  <>
+                    <option value="gemini-2.5-flash">gemini-2.5-flash (Generasi Super Cepat Terbaru - Rekomendasi)</option>
+                    <option value="gemini-2.5-pro">gemini-2.5-pro (Akurasi Maksimal)</option>
+                    <option value="gemini-2.0-flash">gemini-2.0-flash (Generasi Terbaru)</option>
+                    <option value="gemini-1.5-flash">gemini-1.5-flash (Sangat Cepat & Populer)</option>
+                    <option value="gemini-1.5-flash-8b">gemini-1.5-flash-8b (Ultra Ringan)</option>
+                    <option value="gemini-1.5-pro">gemini-1.5-pro</option>
+                  </>
+                )}
               </select>
             </div>
 

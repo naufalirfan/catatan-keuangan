@@ -194,18 +194,48 @@ export async function POST(req: NextRequest) {
       for (let kIdx = 0; kIdx < candidateKeys.length; kIdx++) {
         const currentApiKey = candidateKeys[kIdx];
 
-        // Priority candidate models to try: requested model first, then standard fast fallbacks
-        const modelsToTry = Array.from(new Set([
-          requestedModel,
-          'gemini-2.5-flash',
-          'gemini-2.0-flash',
-          'gemini-1.5-flash',
-          'gemini-1.5-flash-8b',
-          'gemini-2.5-pro',
-          'gemini-1.5-pro',
-        ])).slice(0, 3); // At most 3 fast candidate attempts
+        // 1. Fetch available active models for this specific key (fast ~150ms)
+        let activeModels: string[] = [];
+        try {
+          const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${currentApiKey}`, {
+            signal: AbortSignal.timeout(4000),
+          });
+          if (listRes.ok) {
+            const listData = await listRes.json();
+            activeModels = (listData.models || [])
+              .filter((m: { supportedGenerationMethods?: string[] }) => m.supportedGenerationMethods?.includes('generateContent'))
+              .map((m: { name: string }) => m.name.replace(/^models\//, ''));
+          } else {
+            const errText = await listRes.text();
+            let msg = errText;
+            try { msg = JSON.parse(errText).error?.message || errText; } catch {}
+            lastGeminiError = `Token #${kIdx + 1} (${listRes.status}): ${msg}`;
+            if (listRes.status === 400 || listRes.status === 401 || listRes.status === 403 || listRes.status === 429) {
+              continue; // Langsung coba token cadangan berikutnya
+            }
+          }
+        } catch (e: unknown) {
+          lastGeminiError = `Token #${kIdx + 1}: ` + (e instanceof Error ? e.message : String(e));
+        }
 
-        for (const cand of modelsToTry) {
+        // 2. Tentukan model yang benar-benar aktif dan tersedia
+        const modelsToTry: string[] = [];
+        if (activeModels.length > 0) {
+          if (activeModels.includes(requestedModel)) {
+            modelsToTry.push(requestedModel);
+          }
+          // Tambahkan model flash aktif lainnya sebagai cadangan otomatis
+          const flashModels = activeModels.filter((m) => m !== requestedModel && m.includes('flash'));
+          const otherModels = activeModels.filter((m) => m !== requestedModel && !m.includes('flash'));
+          modelsToTry.push(...flashModels, ...otherModels);
+        } else {
+          // Fallback jika fetch listModels gagal
+          modelsToTry.push(requestedModel, 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash');
+        }
+
+        const prioritized = Array.from(new Set(modelsToTry)).slice(0, 2);
+
+        for (const cand of prioritized) {
           try {
             const url = `https://generativelanguage.googleapis.com/v1beta/models/${cand}:generateContent?key=${currentApiKey}`;
             const res = await fetch(url, {
@@ -230,14 +260,13 @@ export async function POST(req: NextRequest) {
               try {
                 msg = JSON.parse(errText).error?.message || errText;
               } catch {}
-              lastGeminiError = `Token #${kIdx + 1} (${res.status}): ${msg}`;
-              // If token itself is invalid or quota is exceeded (400, 401, 403, 429), break model loop to try next token
+              lastGeminiError = `Token #${kIdx + 1} [${cand}] (${res.status}): ${msg}`;
               if (res.status === 400 || res.status === 401 || res.status === 403 || res.status === 429) {
                 break;
               }
             }
           } catch (e: unknown) {
-            lastGeminiError = `Token #${kIdx + 1}: ` + (e instanceof Error ? e.message : String(e));
+            lastGeminiError = `Token #${kIdx + 1} [${cand}]: ` + (e instanceof Error ? e.message : String(e));
           }
         }
 

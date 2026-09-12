@@ -66,14 +66,48 @@ export default function PengaturanPage() {
   const [isCheckingGeminiKeys, setIsCheckingGeminiKeys] = useState(false);
   const [checkingGeminiIndex, setCheckingGeminiIndex] = useState<number | null>(null);
   const [availableGeminiModels, setAvailableGeminiModels] = useState<string[]>([]);
-
-  const [geminiModel, setGeminiModel] = useState(aiConfig.geminiModel || 'gemini-2.5-flash');
+  const [geminiModel, setGeminiModel] = useState(aiConfig.geminiModel || 'gemini-flash-latest');
   const [customEndpoint, setCustomEndpoint] = useState(aiConfig.customEndpoint || 'https://9router.naufalputra.my.id/v1');
   const [customAuthToken, setCustomAuthToken] = useState(aiConfig.customAuthToken || '');
   const [customModel, setCustomModel] = useState(aiConfig.customModel || 'joo');
   const [customFallbackModel, setCustomFallbackModel] = useState(aiConfig.customFallbackModel || 'jaa');
 
   const [showCustomToken, setShowCustomToken] = useState(false);
+  const [isFetchingLiveModels, setIsFetchingLiveModels] = useState(false);
+
+  // Auto fetch live models from Google if models change in the future
+  const fetchLiveGeminiModels = async (keysToQuery?: string[]) => {
+    const activeKeys = (keysToQuery || geminiKeys).map((k) => k.trim()).filter(Boolean);
+    if (activeKeys.length === 0) return;
+
+    setIsFetchingLiveModels(true);
+    try {
+      const res = await fetch('/api/ai-models', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'check-gemini-keys',
+          keys: [activeKeys[0]],
+        }),
+      });
+      const data = await res.json();
+      if (Array.isArray(data.results) && Array.isArray(data.results[0]?.models) && data.results[0].models.length > 0) {
+        const liveModels: string[] = data.results[0].models;
+        setAvailableGeminiModels(liveModels);
+        setGeminiModel((prev) => {
+          if (!liveModels.includes(prev)) {
+            const best = liveModels.find((m) => m === 'gemini-flash-latest') || 
+                         liveModels.find((m) => m.includes('flash')) || 
+                         liveModels[0];
+            return best || 'gemini-flash-latest';
+          }
+          return prev;
+        });
+      }
+    } catch {} finally {
+      setIsFetchingLiveModels(false);
+    }
+  };
 
   // Synchronize state when aiConfig loads or updates
   useEffect(() => {
@@ -82,11 +116,23 @@ export default function PengaturanPage() {
       ? aiConfig.geminiApiKeys
       : (aiConfig.geminiApiKey ? [aiConfig.geminiApiKey] : ['']);
     setGeminiKeys(keys);
-    setGeminiModel(aiConfig.geminiModel || 'gemini-1.5-flash');
+
+    // Auto-migrate legacy deprecated names to the evergreen gemini-flash-latest
+    const rawModel = aiConfig.geminiModel || 'gemini-flash-latest';
+    const cleanModel = (rawModel === 'gemini-1.5-flash' || rawModel === 'gemini-2.0-flash' || rawModel === 'gemini-2.5-flash' || rawModel === 'gemini-2.5-pro')
+      ? 'gemini-flash-latest'
+      : rawModel;
+    setGeminiModel(cleanModel);
+
     setCustomEndpoint(aiConfig.customEndpoint || 'https://9router.naufalputra.my.id/v1');
     setCustomAuthToken(aiConfig.customAuthToken || '');
     setCustomModel(aiConfig.customModel || 'joo');
     setCustomFallbackModel(aiConfig.customFallbackModel || 'jaa');
+
+    // Auto-fetch live models from Google
+    if (keys[0]?.trim()) {
+      fetchLiveGeminiModels(keys);
+    }
   }, [aiConfig]);
 
 
@@ -249,7 +295,7 @@ export default function PengaturanPage() {
         if (Array.isArray(r.models) && r.models.length > 0) {
           setAvailableGeminiModels((prev) => Array.from(new Set([...prev, ...r.models])));
           if (!r.models.includes(geminiModel)) {
-            const best = r.models.find((m: string) => m.includes('2.5-flash')) || r.models.find((m: string) => m.includes('flash')) || r.models[0];
+            const best = r.models.find((m: string) => m === 'gemini-flash-latest') || r.models.find((m: string) => m.includes('flash')) || r.models[0];
             if (best) setGeminiModel(best);
           }
         }
@@ -318,7 +364,7 @@ export default function PengaturanPage() {
           const unique = Array.from(new Set(allDiscovered));
           setAvailableGeminiModels(unique);
           if (!unique.includes(geminiModel)) {
-            const best = unique.find((m: string) => m.includes('2.5-flash')) || unique.find((m: string) => m.includes('flash')) || unique[0];
+            const best = unique.find((m: string) => m === 'gemini-flash-latest') || unique.find((m: string) => m.includes('flash')) || unique[0];
             if (best) setGeminiModel(best);
           }
         }
@@ -700,9 +746,22 @@ export default function PengaturanPage() {
             </button>
 
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                Model Gemini
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  Model Gemini (Auto-Fetch Aktif & Gratis)
+                </label>
+                <button
+                  type="button"
+                  onClick={() => fetchLiveGeminiModels()}
+                  disabled={isFetchingLiveModels || geminiKeys.every((k) => !k.trim())}
+                  className="text-[11px] text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 font-medium disabled:opacity-50"
+                  title="Ambil ulang daftar model terbaru dari server Google"
+                >
+                  <RefreshCw className={`w-3 h-3 ${isFetchingLiveModels ? 'animate-spin' : ''}`} />
+                  Auto-Refresh Model
+                </button>
+              </div>
+
               <select
                 value={geminiModel}
                 onChange={(e) => setGeminiModel(e.target.value)}
@@ -716,12 +775,11 @@ export default function PengaturanPage() {
                   ))
                 ) : (
                   <>
-                    <option value="gemini-2.5-flash">gemini-2.5-flash (Generasi Super Cepat Terbaru - Rekomendasi)</option>
-                    <option value="gemini-2.5-pro">gemini-2.5-pro (Akurasi Maksimal)</option>
-                    <option value="gemini-2.0-flash">gemini-2.0-flash (Generasi Terbaru)</option>
-                    <option value="gemini-1.5-flash">gemini-1.5-flash (Sangat Cepat & Populer)</option>
-                    <option value="gemini-1.5-flash-8b">gemini-1.5-flash-8b (Ultra Ringan)</option>
-                    <option value="gemini-1.5-pro">gemini-1.5-pro</option>
+                    <option value="gemini-flash-latest">gemini-flash-latest ★ (Paling Stabil & Gratis - Rekomendasi)</option>
+                    <option value="gemini-flash-lite-latest">gemini-flash-lite-latest (Ultra Cepat & Ringan)</option>
+                    <option value="gemini-3-flash-preview">gemini-3-flash-preview (Generasi Terbaru)</option>
+                    <option value="gemini-3.1-flash-lite">gemini-3.1-flash-lite</option>
+                    <option value="gemini-pro-latest">gemini-pro-latest (Akurasi Maksimal)</option>
                   </>
                 )}
               </select>

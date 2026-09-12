@@ -205,18 +205,15 @@ export async function POST(req: NextRequest) {
           if (listRes.ok) {
             const listData = await listRes.json();
             activeModels = (listData.models || [])
-              .filter((m: { supportedGenerationMethods?: string[]; name?: string }) => {
-                const name = (m.name || '').toLowerCase();
-                const isGen = m.supportedGenerationMethods?.includes('generateContent');
-                const isText = !name.includes('tts') && 
-                               !name.includes('audio') && 
-                               !name.includes('embed') && 
-                               !name.includes('imagen') && 
-                               !name.includes('aqa') && 
-                               !name.includes('realtime');
-                return isGen && isText;
-              })
-              .map((m: { name: string }) => m.name.replace(/^models\//, ''));
+              .map((m: { name?: string }) => (m.name || '').replace(/^models\//, ''))
+              .filter((name: string) => {
+                const lower = name.toLowerCase();
+                if (!lower.startsWith('gemini-')) return false;
+                if (lower.includes('tts') || lower.includes('audio') || lower.includes('image')) return false;
+                if (lower.includes('embed') || lower.includes('customtools') || lower.includes('banana')) return false;
+                if (lower === 'gemini-2.5-flash' || lower === 'gemini-2.5-pro' || lower === 'gemini-2.0-flash') return false; // Deprecated by Google for new users
+                return true;
+              });
           } else {
             const errText = await listRes.text();
             let msg = errText;
@@ -230,28 +227,34 @@ export async function POST(req: NextRequest) {
           allDiagnosticErrors.push(`Token #${kIdx + 1} ListModels: ` + (e instanceof Error ? e.message : String(e)));
         }
 
-        // 2. Tentukan model teks yang benar-benar aktif dan tersedia
+        // 2. Tentukan model teks yang benar-benar aktif, gratis, dan stabil
         const modelsToTry: string[] = [];
+        const priorityNames = [
+          'gemini-flash-latest',
+          'gemini-flash-lite-latest',
+          'gemini-3-flash-preview',
+          'gemini-3.1-flash-lite',
+          'gemini-pro-latest',
+          'gemini-3.1-pro-preview',
+        ];
+
         if (activeModels.length > 0) {
           if (activeModels.includes(requestedModel)) {
             modelsToTry.push(requestedModel);
           }
-          // Prioritas model teks yang umum dan stabil
-          const priorityNames = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-2.5-pro', 'gemini-1.5-pro'];
           for (const p of priorityNames) {
             if (activeModels.includes(p) && !modelsToTry.includes(p)) {
               modelsToTry.push(p);
             }
           }
-          // Tambahkan model teks aktif lainnya jika ada
           for (const m of activeModels) {
             if (!modelsToTry.includes(m)) {
               modelsToTry.push(m);
             }
           }
         } else {
-          // Fallback jika fetch listModels gagal
-          modelsToTry.push(requestedModel, 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash');
+          // Fallback ke alias resmi Google yang selalu aktif
+          modelsToTry.push('gemini-flash-latest', 'gemini-flash-lite-latest', 'gemini-pro-latest');
         }
 
         const prioritized = Array.from(new Set(modelsToTry)).slice(0, 3);

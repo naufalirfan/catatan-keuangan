@@ -117,7 +117,7 @@ const DEFAULT_AI_CONFIG: AiConfig = {
   provider: 'custom',
   geminiApiKey: process.env.NEXT_PUBLIC_GEMINI_API_KEY || '',
   geminiApiKeys: process.env.NEXT_PUBLIC_GEMINI_API_KEY ? [process.env.NEXT_PUBLIC_GEMINI_API_KEY] : [],
-  geminiModel: 'gemini-1.5-flash',
+  geminiModel: 'gemini-flash-latest',
   customEndpoint: process.env.NEXT_PUBLIC_AI_ENDPOINT || 'https://9router.naufalputra.my.id/v1',
   customAuthToken: process.env.NEXT_PUBLIC_AI_AUTH_TOKEN || 'sk-f7dc96564905d265-i8kpea-767a0d95',
   customModel: process.env.NEXT_PUBLIC_AI_MODEL || 'joo',

@@ -150,19 +150,33 @@ export async function POST(req: NextRequest) {
 
             if (res.ok) {
               const data = await res.json();
+              const priorityOrder = [
+                'gemini-flash-latest',
+                'gemini-flash-lite-latest',
+                'gemini-3-flash-preview',
+                'gemini-3.1-flash-lite',
+                'gemini-pro-latest',
+                'gemini-3.1-pro-preview',
+              ];
+
               const supported = (data.models || [])
-                .filter((m: { supportedGenerationMethods?: string[]; name?: string }) => {
-                  const name = (m.name || '').toLowerCase();
-                  const isGen = m.supportedGenerationMethods?.includes('generateContent');
-                  const isText = !name.includes('tts') && 
-                                 !name.includes('audio') && 
-                                 !name.includes('embed') && 
-                                 !name.includes('imagen') && 
-                                 !name.includes('aqa') && 
-                                 !name.includes('realtime');
-                  return isGen && isText;
+                .map((m: { name?: string }) => (m.name || '').replace(/^models\//, ''))
+                .filter((name: string) => {
+                  const lower = name.toLowerCase();
+                  if (!lower.startsWith('gemini-')) return false;
+                  if (lower.includes('tts') || lower.includes('audio') || lower.includes('image')) return false;
+                  if (lower.includes('embed') || lower.includes('customtools') || lower.includes('banana')) return false;
+                  if (lower === 'gemini-2.5-flash' || lower === 'gemini-2.5-pro' || lower === 'gemini-2.0-flash') return false; // Deprecated by Google for new users
+                  return true;
                 })
-                .map((m: { name: string }) => m.name.replace(/^models\//, ''));
+                .sort((a: string, b: string) => {
+                  const idxA = priorityOrder.indexOf(a);
+                  const idxB = priorityOrder.indexOf(b);
+                  if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+                  if (idxA !== -1) return -1;
+                  if (idxB !== -1) return 1;
+                  return a.localeCompare(b);
+                });
 
               if (supported.length > 0) {
                 return {
@@ -173,7 +187,7 @@ export async function POST(req: NextRequest) {
                   modelsCount: supported.length,
                   topModel: supported[0],
                   models: supported,
-                  message: `Aktif (${supported.length} model: ${supported.slice(0, 3).join(', ')})`,
+                  message: `Aktif (${supported.length} model gratis: ${supported.slice(0, 3).join(', ')})`,
                 };
               } else {
                 return {

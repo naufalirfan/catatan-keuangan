@@ -62,9 +62,9 @@ export default function Navbar() {
         
         {/* Brand */}
         <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 via-teal-500 to-cyan-500 p-0.5 shadow-md shadow-emerald-500/20 group-hover:scale-105 transition-transform">
-            <div className="w-full h-full bg-slate-900 rounded-[10px] flex items-center justify-center text-white">
-              <Wallet className="w-5 h-5 text-emerald-400" />
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 via-teal-500 to-cyan-500 p-0.5 shadow-md shadow-emerald-500/20 group-hover:scale-105 transition-transform flex items-center justify-center">
+            <div className="w-full h-full bg-slate-900 rounded-[10px] flex items-center justify-center overflow-hidden p-1">
+              <img src="/flying-money.png" alt="DompetKu" className="w-full h-full object-contain drop-shadow" />
             </div>
           </div>
           <div>

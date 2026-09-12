@@ -77,8 +77,8 @@ export default function AuthGate({ children }: AuthGateProps) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg shadow-emerald-500/30 animate-bounce">
-            <Wallet className="w-6 h-6" />
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg shadow-emerald-500/30 animate-bounce p-2.5">
+            <img src="/flying-money.png" alt="DompetKu AI" className="w-full h-full object-contain drop-shadow" />
           </div>
           <p className="text-xs font-semibold text-slate-500 tracking-wider uppercase animate-pulse">
             Memuat DompetKu AI...
@@ -100,8 +100,8 @@ export default function AuthGate({ children }: AuthGateProps) {
         
         {/* Logo & Headline */}
         <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-gradient-to-tr from-emerald-500 via-teal-500 to-cyan-500 text-white shadow-xl shadow-emerald-500/25 mb-1">
-            <Wallet className="w-8 h-8" />
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-gradient-to-tr from-emerald-500 via-teal-500 to-cyan-500 text-white shadow-xl shadow-emerald-500/25 mb-1 p-3">
+            <img src="/flying-money.png" alt="DompetKu AI" className="w-full h-full object-contain drop-shadow" />
           </div>
           <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
             Dompet<span className="text-emerald-500">Ku</span> AI

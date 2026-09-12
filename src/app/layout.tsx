@@ -10,6 +10,11 @@ import PlanModal from '@/components/PlanModal';
 export const metadata: Metadata = {
   title: 'DompetKu AI • Pencatat Keuangan Pintar by Naufal',
   description: 'Aplikasi pencatatan keuangan mobile-friendly dengan input otomatis Gemini AI, multi-dompet, dan visualisasi pengeluaran.',
+  icons: {
+    icon: '/flying-money.png',
+    shortcut: '/flying-money.png',
+    apple: '/flying-money.png',
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',

@@ -416,13 +416,14 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     if (savedAi) {
       try {
         const parsed = JSON.parse(savedAi);
+        const firstKey = Array.isArray(parsed.geminiApiKeys) && parsed.geminiApiKeys.length > 0 ? parsed.geminiApiKeys[0] : '';
         setAiConfig({
           ...DEFAULT_AI_CONFIG,
           ...parsed,
           provider: parsed.provider || 'gemini',
-          geminiApiKey: parsed.geminiApiKey || DEFAULT_AI_CONFIG.geminiApiKey,
-          geminiApiKeys: Array.isArray(parsed.geminiApiKeys) && parsed.geminiApiKeys.length > 0 
-            ? parsed.geminiApiKeys 
+          geminiApiKey: parsed.geminiApiKey || firstKey || DEFAULT_AI_CONFIG.geminiApiKey,
+          geminiApiKeys: Array.isArray(parsed.geminiApiKeys) && parsed.geminiApiKeys.length > 0
+            ? parsed.geminiApiKeys
             : (parsed.geminiApiKey ? [parsed.geminiApiKey] : DEFAULT_AI_CONFIG.geminiApiKeys),
           customEndpoint: parsed.customEndpoint?.trim() || DEFAULT_AI_CONFIG.customEndpoint,
           customAuthToken: parsed.customAuthToken?.trim() || DEFAULT_AI_CONFIG.customAuthToken,

@@ -1,11 +1,25 @@
 import { NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/utils/supabase-server';
+import { createClient } from '@supabase/supabase-js';
 
-export async function GET(request: Request) {
-  const supabase = createServerSupabaseClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: 'Tidak ada pengguna yang masuk' }, { status: 401 });
+function getSupabase() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  const key =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    '';
+  if (!url || !key) return null;
+  return createClient(url, key);
+}
+
+export async function GET() {
+  const supabase = getSupabase();
+  if (!supabase) {
+    return NextResponse.json({ error: 'Supabase tidak dikonfigurasi' }, { status: 500 });
+  }
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) {
+    return NextResponse.json({ ai_config: null }, { status: 200 });
   }
   const { data, error } = await supabase
     .from('profiles')
@@ -13,15 +27,18 @@ export async function GET(request: Request) {
     .eq('id', user.id)
     .single();
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ ai_config: null }, { status: 200 });
   }
   return NextResponse.json({ ai_config: data?.ai_config || null });
 }
 
 export async function POST(request: Request) {
-  const supabase = createServerSupabaseClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
+  const supabase = getSupabase();
+  if (!supabase) {
+    return NextResponse.json({ error: 'Supabase tidak dikonfigurasi' }, { status: 500 });
+  }
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) {
     return NextResponse.json({ error: 'Tidak ada pengguna yang masuk' }, { status: 401 });
   }
   const body = await request.json();

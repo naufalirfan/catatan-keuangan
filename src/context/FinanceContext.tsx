@@ -413,43 +413,43 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
     // Jika user sudah login, ambil AI config dari Supabase
     if (isSupabaseConfigured && supabase && user) {
-      supabase.from('profiles')
-        .select('ai_config')
-        .eq('id', user.id)
-        .single()
-        .then(({ data, error }) => {
-          if (error) return;
-          if (data && data.ai_config) {
+      (async () => {
+        try {
+          const { data, error } = await supabase.from('profiles')
+            .select('ai_config')
+            .eq('id', user.id)
+            .single();
+          if (error || !data) throw new Error('no data');
+          if (data.ai_config) {
             setAiConfig({ ...DEFAULT_AI_CONFIG, ...data.ai_config });
-            // Simpan ke localStorage sebagai cache
             if (typeof window !== 'undefined') {
               localStorage.setItem(STORAGE_KEYS.AI_CONFIG, JSON.stringify(data.ai_config));
             }
             return;
           }
-          // Jika tidak ada config di Supabase, fallback ke localStorage (jika ada)
-          const savedAi = localStorage.getItem(STORAGE_KEYS.AI_CONFIG);
-          if (savedAi) {
-            try {
-              const parsed = JSON.parse(savedAi);
-              const firstKey = Array.isArray(parsed.geminiApiKeys) && parsed.geminiApiKeys.length > 0 ? parsed.geminiApiKeys[0] : '';
-              setAiConfig({
-                ...DEFAULT_AI_CONFIG,
-                ...parsed,
-                provider: parsed.provider || 'gemini',
-                geminiApiKey: parsed.geminiApiKey || firstKey || DEFAULT_AI_CONFIG.geminiApiKey,
-                geminiApiKeys: Array.isArray(parsed.geminiApiKeys) && parsed.geminiApiKeys.length > 0
-                  ? parsed.geminiApiKeys
-                  : (parsed.geminiApiKey ? [parsed.geminiApiKey] : DEFAULT_AI_CONFIG.geminiApiKeys),
-                customEndpoint: parsed.customEndpoint?.trim() || DEFAULT_AI_CONFIG.customEndpoint,
-                customAuthToken: parsed.customAuthToken?.trim() || DEFAULT_AI_CONFIG.customAuthToken,
-                customModel: parsed.customModel?.trim() || DEFAULT_AI_CONFIG.customModel,
-                customFallbackModel: parsed.customFallbackModel?.trim() || DEFAULT_AI_CONFIG.customFallbackModel || 'jaa',
-              });
-            } catch {}
-          }
-        })
-        .catch(() => {});
+        } catch {}
+        // Fallback ke localStorage
+        const savedAi = localStorage.getItem(STORAGE_KEYS.AI_CONFIG);
+        if (savedAi) {
+          try {
+            const parsed = JSON.parse(savedAi);
+            const firstKey = Array.isArray(parsed.geminiApiKeys) && parsed.geminiApiKeys.length > 0 ? parsed.geminiApiKeys[0] : '';
+            setAiConfig({
+              ...DEFAULT_AI_CONFIG,
+              ...parsed,
+              provider: parsed.provider || 'gemini',
+              geminiApiKey: parsed.geminiApiKey || firstKey || DEFAULT_AI_CONFIG.geminiApiKey,
+              geminiApiKeys: Array.isArray(parsed.geminiApiKeys) && parsed.geminiApiKeys.length > 0
+                ? parsed.geminiApiKeys
+                : (parsed.geminiApiKey ? [parsed.geminiApiKey] : DEFAULT_AI_CONFIG.geminiApiKeys),
+              customEndpoint: parsed.customEndpoint?.trim() || DEFAULT_AI_CONFIG.customEndpoint,
+              customAuthToken: parsed.customAuthToken?.trim() || DEFAULT_AI_CONFIG.customAuthToken,
+              customModel: parsed.customModel?.trim() || DEFAULT_AI_CONFIG.customModel,
+              customFallbackModel: parsed.customFallbackModel?.trim() || DEFAULT_AI_CONFIG.customFallbackModel || 'jaa',
+            });
+          } catch {}
+        }
+      })();
     } else {
       // Jika belum login (hanya localStorage), tetap load dari localStorage
       const savedAi = localStorage.getItem(STORAGE_KEYS.AI_CONFIG);
@@ -474,6 +474,10 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       }
     }
   }, []);
+
+  // Load Members + Supabase auth listener
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
 
     // Load Members Registry from LocalStorage
     const registryRaw = localStorage.getItem(STORAGE_KEYS.MEMBERS);
@@ -510,7 +514,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     }
 
     // Priority 1: Check Cookie Session & LocalStorage for instant login
-
     const cookieUser = getUserSession();
     const savedUser = localStorage.getItem(STORAGE_KEYS.USER);
     let activeUser: UserProfile | null = cookieUser;
@@ -523,7 +526,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
     if (activeUser) {
       setUser(activeUser);
-      saveUserSession(activeUser); // Refresh 90-day cookie
+      saveUserSession(activeUser);
       loadScopedData(activeUser);
       setIsLoading(false);
     }
@@ -545,7 +548,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
           };
           setUser(loggedUser);
           localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(loggedUser));
-          saveUserSession(loggedUser); // 90-day persistent cookie
+          saveUserSession(loggedUser);
           loadScopedData(loggedUser);
         }
         setIsLoading(false);
@@ -566,7 +569,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
           };
           setUser(loggedUser);
           localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(loggedUser));
-          saveUserSession(loggedUser); // 90-day persistent cookie
+          saveUserSession(loggedUser);
           loadScopedData(loggedUser);
           triggerPostLoginPopup(loggedUser);
         } else if (event === 'SIGNED_OUT') {
@@ -575,7 +578,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
           clearUserSession();
         }
       });
-
 
       return () => {
         authListener.subscription.unsubscribe();

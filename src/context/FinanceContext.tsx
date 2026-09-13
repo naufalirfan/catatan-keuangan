@@ -407,11 +407,11 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Initialize from LocalStorage and Supabase Session
+  // Inisialisasi dari LocalStorage dan Supabase
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // Load AI Config
+    // Muat konfigurasi AI dari LocalStorage
     const savedAi = localStorage.getItem(STORAGE_KEYS.AI_CONFIG);
     if (savedAi) {
       try {
@@ -431,6 +431,25 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
           customFallbackModel: parsed.customFallbackModel?.trim() || DEFAULT_AI_CONFIG.customFallbackModel || 'jaa',
         });
       } catch {}
+    }
+
+    // Jika pengguna sudah login, coba ambil AI config dari Supabase (Supabase memiliki prioritas)
+    if (isSupabaseConfigured && supabase && user) {
+      supabase.from('profiles')
+        .select('ai_config')
+        .eq('id', user.id)
+        .single()
+        .then(({ data, error }) => {
+          if (error) return;
+          if (data && data.ai_config) {
+            setAiConfig(prev => ({ ...prev, ...data.ai_config }));
+            // Simpan ke localStorage agar tetap konsisten
+            if (typeof window !== 'undefined') {
+              localStorage.setItem(STORAGE_KEYS.AI_CONFIG, JSON.stringify({ ...prev, ...data.ai_config }));
+            }
+          }
+        })
+        .catch(() => {});
     }
 
     // Load Members Registry from LocalStorage
@@ -1059,6 +1078,15 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     setAiConfig(newConfig);
     if (typeof window !== 'undefined') {
       localStorage.setItem(STORAGE_KEYS.AI_CONFIG, JSON.stringify(newConfig));
+    }
+    // Hanya superadmin yang dapat menyimpan konfigurasi ke Supabase
+    if (isSuperAdmin && isSupabaseConfigured && supabase && user) {
+      supabase.from('profiles').upsert({
+        id: user.id,
+        email: user.email,
+        ai_config: newConfig,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'id' }).then(() => {}, console.warn);
     }
   };
 

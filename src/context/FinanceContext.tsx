@@ -411,7 +411,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // Jika user sudah login, ambil AI config dari Supabase
     if (isSupabaseConfigured && supabase && user) {
       (async () => {
         try {
@@ -419,7 +418,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
             .select('ai_config')
             .eq('id', user.id)
             .single();
-          if (error || !data) throw new Error('no data');
+          if (error || !data) throw new Error(error?.message || 'no data');
           if (data.ai_config) {
             setAiConfig({ ...DEFAULT_AI_CONFIG, ...data.ai_config });
             if (typeof window !== 'undefined') {
@@ -451,7 +450,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         }
       })();
     } else {
-      // Jika belum login (hanya localStorage), tetap load dari localStorage
       const savedAi = localStorage.getItem(STORAGE_KEYS.AI_CONFIG);
       if (savedAi) {
         try {

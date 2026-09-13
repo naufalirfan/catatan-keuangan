@@ -142,6 +142,23 @@ export default function PengaturanPage() {
     }
   }, [aiConfig]);
 
+  // Load AI config from Supabase when user is authenticated (required for mobile)
+  useEffect(() => {
+    if (!user) return;
+    const load = async () => {
+      try {
+        const res = await fetch('/api/ai-config');
+        if (!res.ok) throw new Error('Failed to fetch AI config');
+        const data = await res.json();
+        if (data.ai_config) {
+          updateAiConfig(data.ai_config);
+        }
+      } catch (e) {
+        console.error('Error loading AI config:', e);
+      }
+    };
+    load();
+  }, [user]);
 
   // Test state
   const [isTesting, setIsTesting] = useState(false);

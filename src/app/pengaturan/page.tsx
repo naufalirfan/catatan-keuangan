@@ -560,7 +560,11 @@ export default function PengaturanPage() {
             type="button"
             onClick={() => {
               setProvider('gemini');
-              setTestResult(null);
+              updateAiConfig({ provider: 'gemini' });
+              setTestResult({
+                success: true,
+                message: 'Mode Google Gemini AKTIF langsung! Seluruh pemindaian struk & transaksi akan diproses oleh Gemini.',
+              });
             }}
             className={`py-2 px-1.5 rounded-xl flex items-center justify-center gap-1 transition-all relative ${
               provider === 'gemini'
@@ -581,7 +585,11 @@ export default function PengaturanPage() {
             type="button"
             onClick={() => {
               setProvider('custom');
-              setTestResult(null);
+              updateAiConfig({ provider: 'custom' });
+              setTestResult({
+                success: true,
+                message: 'Mode Custom Endpoint AKTIF langsung! AI akan diarahkan ke 9Router/OpenAI endpoint.',
+              });
             }}
             className={`py-2 px-1.5 rounded-xl flex items-center justify-center gap-1 transition-all relative ${
               provider === 'custom'
@@ -602,7 +610,11 @@ export default function PengaturanPage() {
             type="button"
             onClick={() => {
               setProvider('auto');
-              setTestResult(null);
+              updateAiConfig({ provider: 'auto' });
+              setTestResult({
+                success: true,
+                message: 'Mode Auto Switch AKTIF langsung! Prioritas Gemini, otomatis beralih ke Custom Router jika limit.',
+              });
             }}
             className={`py-2 px-1.5 rounded-xl flex items-center justify-center gap-1 transition-all relative ${
               provider === 'auto'

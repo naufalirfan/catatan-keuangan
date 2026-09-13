@@ -197,7 +197,7 @@ async function tryGemini(
     let activeModels: string[] = [];
     try {
       const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${currentApiKey}`, {
-        signal: AbortSignal.timeout(4000),
+        signal: AbortSignal.timeout(imageBase64 ? 7000 : 4000),
       });
       if (listRes.ok) {
         const listData = await listRes.json();
@@ -206,9 +206,8 @@ async function tryGemini(
           .filter((name: string) => {
             const lower = name.toLowerCase();
             if (!lower.startsWith('gemini-')) return false;
-            if (lower.includes('tts') || lower.includes('audio') || lower.includes('image')) return false;
+            if (lower.includes('tts') || lower.includes('audio')) return false;
             if (lower.includes('embed') || lower.includes('customtools') || lower.includes('banana')) return false;
-            if (lower === 'gemini-2.5-flash' || lower === 'gemini-2.5-pro' || lower === 'gemini-2.0-flash') return false;
             return true;
           });
       } else {
@@ -226,12 +225,13 @@ async function tryGemini(
 
     const modelsToTry: string[] = [];
     const priorityNames = [
+      'gemini-1.5-flash',
       'gemini-flash-latest',
+      'gemini-2.5-flash',
       'gemini-flash-lite-latest',
-      'gemini-3-flash-preview',
-      'gemini-3.1-flash-lite',
+      'gemini-1.5-pro',
       'gemini-pro-latest',
-      'gemini-3.1-pro-preview',
+      'gemini-2.0-flash',
     ];
 
     if (activeModels.length > 0) {
@@ -249,7 +249,7 @@ async function tryGemini(
         }
       }
     } else {
-      modelsToTry.push('gemini-flash-latest', 'gemini-flash-lite-latest', 'gemini-pro-latest');
+      modelsToTry.push('gemini-1.5-flash', 'gemini-flash-latest', 'gemini-2.5-flash', 'gemini-flash-lite-latest');
     }
 
     const prioritized = Array.from(new Set(modelsToTry)).slice(0, 3);
@@ -261,7 +261,7 @@ async function tryGemini(
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(requestBody),
-          signal: AbortSignal.timeout(6000),
+          signal: AbortSignal.timeout(imageBase64 ? 25000 : 10000),
         });
 
         if (res.ok) {
@@ -342,10 +342,22 @@ async function tryCustom(
     fallbackList.push('jaa');
   }
 
-  const modelsToTry = [model, ...fallbackList];
+  // Jika terdapat gambar struk, prioritaskan model router yang mendukung pengenalan visual (Vision)
+  const modelsToTry: string[] = [];
+  if (imageBase64) {
+    const knownVisionModels = ['af/google/gemini-2.5-flash', 'glm-cn/glm-5.3-flash', 'cf/@cf/moonshotai/kimi-k2.5', 'glm-cn/glm-4.6v'];
+    for (const vm of knownVisionModels) {
+      if (!modelsToTry.includes(vm)) modelsToTry.push(vm);
+    }
+  }
+  if (!modelsToTry.includes(model)) modelsToTry.push(model);
+  for (const fb of fallbackList) {
+    if (!modelsToTry.includes(fb)) modelsToTry.push(fb);
+  }
+
   let lastError = '';
 
-  for (const currentModel of modelsToTry) {
+  for (const currentModel of modelsToTry.slice(0, 4)) {
     try {
       const response = await fetch(cleanEndpoint, {
         method: 'POST',
@@ -359,7 +371,7 @@ async function tryCustom(
           temperature: 0.1,
           stream: false,
         }),
-        signal: AbortSignal.timeout(30000),
+        signal: AbortSignal.timeout(imageBase64 ? 18000 : 12000),
       });
 
       if (!response.ok) {
@@ -429,11 +441,11 @@ async function tryCustom(
 export async function POST(req: NextRequest) {
   try {
     const { input, imageBase64, config } = await req.json();
-    const mode: 'gemini' | 'custom' | 'auto' = config?.provider === 'gemini'
-      ? 'gemini'
+    const mode: 'gemini' | 'custom' | 'auto' = config?.provider === 'custom'
+      ? 'custom'
       : config?.provider === 'auto'
       ? 'auto'
-      : 'custom';
+      : 'gemini';
 
     // ==========================================
     // JALUR 1: HANYA GOOGLE GEMINI

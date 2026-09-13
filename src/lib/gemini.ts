@@ -258,7 +258,7 @@ async function callGeminiApi(
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(requestBody),
-          signal: AbortSignal.timeout(6000),
+          signal: AbortSignal.timeout(imageBase64 ? 25000 : 10000),
         });
 
         if (res.ok) {

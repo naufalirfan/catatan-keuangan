@@ -222,7 +222,7 @@ const DEFAULT_DEBTS: DebtRecord[] = [
 ];
 
 const DEFAULT_AI_CONFIG: AiConfig = {
-  provider: 'custom',
+  provider: 'gemini',
   geminiApiKey: process.env.NEXT_PUBLIC_GEMINI_API_KEY || '',
   geminiApiKeys: process.env.NEXT_PUBLIC_GEMINI_API_KEY ? [process.env.NEXT_PUBLIC_GEMINI_API_KEY] : [],
   geminiModel: 'gemini-flash-latest',
@@ -419,7 +419,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         setAiConfig({
           ...DEFAULT_AI_CONFIG,
           ...parsed,
-          provider: parsed.provider || 'custom',
+          provider: parsed.provider || 'gemini',
           geminiApiKey: parsed.geminiApiKey || DEFAULT_AI_CONFIG.geminiApiKey,
           geminiApiKeys: Array.isArray(parsed.geminiApiKeys) && parsed.geminiApiKeys.length > 0 
             ? parsed.geminiApiKeys 

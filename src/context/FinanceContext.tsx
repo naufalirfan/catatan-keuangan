@@ -407,33 +407,11 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Inisialisasi dari LocalStorage dan Supabase
+  // Inisialisasi: ambil konfigurasi AI dari Supabase (prioritas) dan cache ke localStorage
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // Muat konfigurasi AI dari LocalStorage
-    const savedAi = localStorage.getItem(STORAGE_KEYS.AI_CONFIG);
-    if (savedAi) {
-      try {
-        const parsed = JSON.parse(savedAi);
-        const firstKey = Array.isArray(parsed.geminiApiKeys) && parsed.geminiApiKeys.length > 0 ? parsed.geminiApiKeys[0] : '';
-        setAiConfig({
-          ...DEFAULT_AI_CONFIG,
-          ...parsed,
-          provider: parsed.provider || 'gemini',
-          geminiApiKey: parsed.geminiApiKey || firstKey || DEFAULT_AI_CONFIG.geminiApiKey,
-          geminiApiKeys: Array.isArray(parsed.geminiApiKeys) && parsed.geminiApiKeys.length > 0
-            ? parsed.geminiApiKeys
-            : (parsed.geminiApiKey ? [parsed.geminiApiKey] : DEFAULT_AI_CONFIG.geminiApiKeys),
-          customEndpoint: parsed.customEndpoint?.trim() || DEFAULT_AI_CONFIG.customEndpoint,
-          customAuthToken: parsed.customAuthToken?.trim() || DEFAULT_AI_CONFIG.customAuthToken,
-          customModel: parsed.customModel?.trim() || DEFAULT_AI_CONFIG.customModel,
-          customFallbackModel: parsed.customFallbackModel?.trim() || DEFAULT_AI_CONFIG.customFallbackModel || 'jaa',
-        });
-      } catch {}
-    }
-
-    // Jika pengguna sudah login, coba ambil AI config dari Supabase (Supabase memiliki prioritas)
+    // Jika user sudah login, ambil AI config dari Supabase
     if (isSupabaseConfigured && supabase && user) {
       supabase.from('profiles')
         .select('ai_config')
@@ -442,15 +420,60 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         .then(({ data, error }) => {
           if (error) return;
           if (data && data.ai_config) {
-            setAiConfig(prev => ({ ...prev, ...data.ai_config }));
-            // Simpan ke localStorage agar tetap konsisten
+            setAiConfig({ ...DEFAULT_AI_CONFIG, ...data.ai_config });
+            // Simpan ke localStorage sebagai cache
             if (typeof window !== 'undefined') {
-              localStorage.setItem(STORAGE_KEYS.AI_CONFIG, JSON.stringify({ ...prev, ...data.ai_config }));
+              localStorage.setItem(STORAGE_KEYS.AI_CONFIG, JSON.stringify(data.ai_config));
             }
+            return;
+          }
+          // Jika tidak ada config di Supabase, fallback ke localStorage (jika ada)
+          const savedAi = localStorage.getItem(STORAGE_KEYS.AI_CONFIG);
+          if (savedAi) {
+            try {
+              const parsed = JSON.parse(savedAi);
+              const firstKey = Array.isArray(parsed.geminiApiKeys) && parsed.geminiApiKeys.length > 0 ? parsed.geminiApiKeys[0] : '';
+              setAiConfig({
+                ...DEFAULT_AI_CONFIG,
+                ...parsed,
+                provider: parsed.provider || 'gemini',
+                geminiApiKey: parsed.geminiApiKey || firstKey || DEFAULT_AI_CONFIG.geminiApiKey,
+                geminiApiKeys: Array.isArray(parsed.geminiApiKeys) && parsed.geminiApiKeys.length > 0
+                  ? parsed.geminiApiKeys
+                  : (parsed.geminiApiKey ? [parsed.geminiApiKey] : DEFAULT_AI_CONFIG.geminiApiKeys),
+                customEndpoint: parsed.customEndpoint?.trim() || DEFAULT_AI_CONFIG.customEndpoint,
+                customAuthToken: parsed.customAuthToken?.trim() || DEFAULT_AI_CONFIG.customAuthToken,
+                customModel: parsed.customModel?.trim() || DEFAULT_AI_CONFIG.customModel,
+                customFallbackModel: parsed.customFallbackModel?.trim() || DEFAULT_AI_CONFIG.customFallbackModel || 'jaa',
+              });
+            } catch {}
           }
         })
         .catch(() => {});
+    } else {
+      // Jika belum login (hanya localStorage), tetap load dari localStorage
+      const savedAi = localStorage.getItem(STORAGE_KEYS.AI_CONFIG);
+      if (savedAi) {
+        try {
+          const parsed = JSON.parse(savedAi);
+          const firstKey = Array.isArray(parsed.geminiApiKeys) && parsed.geminiApiKeys.length > 0 ? parsed.geminiApiKeys[0] : '';
+          setAiConfig({
+            ...DEFAULT_AI_CONFIG,
+            ...parsed,
+            provider: parsed.provider || 'gemini',
+            geminiApiKey: parsed.geminiApiKey || firstKey || DEFAULT_AI_CONFIG.geminiApiKey,
+            geminiApiKeys: Array.isArray(parsed.geminiApiKeys) && parsed.geminiApiKeys.length > 0
+              ? parsed.geminiApiKeys
+              : (parsed.geminiApiKey ? [parsed.geminiApiKey] : DEFAULT_AI_CONFIG.geminiApiKeys),
+            customEndpoint: parsed.customEndpoint?.trim() || DEFAULT_AI_CONFIG.customEndpoint,
+            customAuthToken: parsed.customAuthToken?.trim() || DEFAULT_AI_CONFIG.customAuthToken,
+            customModel: parsed.customModel?.trim() || DEFAULT_AI_CONFIG.customModel,
+            customFallbackModel: parsed.customFallbackModel?.trim() || DEFAULT_AI_CONFIG.customFallbackModel || 'jaa',
+          });
+        } catch {}
+      }
     }
+  }, []);
 
     // Load Members Registry from LocalStorage
     const registryRaw = localStorage.getItem(STORAGE_KEYS.MEMBERS);
@@ -1072,14 +1095,11 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
-  // AI Config
+  // AI Config – hanya Supabase yang menjadi sumber kebenaran
   const updateAiConfig = (updates: Partial<AiConfig>) => {
     const newConfig = { ...aiConfig, ...updates };
     setAiConfig(newConfig);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(STORAGE_KEYS.AI_CONFIG, JSON.stringify(newConfig));
-    }
-    // Hanya superadmin yang dapat menyimpan konfigurasi ke Supabase
+    // Simpan ke Supabase bila user superadmin
     if (isSuperAdmin && isSupabaseConfigured && supabase && user) {
       supabase.from('profiles').upsert({
         id: user.id,
@@ -1087,6 +1107,10 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         ai_config: newConfig,
         updated_at: new Date().toISOString(),
       }, { onConflict: 'id' }).then(() => {}, console.warn);
+    }
+    // Simpan ke localStorage sebagai cache (bukan sumber utama)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_KEYS.AI_CONFIG, JSON.stringify(newConfig));
     }
   };
 

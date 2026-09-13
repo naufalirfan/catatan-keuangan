@@ -8,8 +8,8 @@ import AuthGate from '@/components/AuthGate';
 import PlanModal from '@/components/PlanModal';
 
 export const metadata: Metadata = {
-  title: 'DompetKu AI • Pencatat Keuangan Pintar by Naufal',
-  description: 'Aplikasi pencatatan keuangan mobile-friendly dengan input otomatis Gemini AI, multi-dompet, dan visualisasi pengeluaran.',
+  title: 'KashFolio: Money & Expense Tracker • by Naufal',
+  description: 'Aplikasi pencatatan keuangan modern mobile-first dengan AI cerdas, multi-rekening tanpa batas, anggaran per kategori, target tabungan, dan catatan hutang.',
   icons: {
     icon: '/flying-money.png',
     shortcut: '/flying-money.png',
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'DompetKu AI',
+    title: 'KashFolio',
   },
 };
 

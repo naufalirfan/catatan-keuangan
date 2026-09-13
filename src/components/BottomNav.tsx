@@ -7,7 +7,7 @@ import {
   Home, 
   ReceiptText, 
   Sparkles, 
-  PieChart, 
+  Wallet, 
   Settings 
 } from 'lucide-react';
 
@@ -21,8 +21,8 @@ export default function BottomNav({ onOpenManualModal }: BottomNavProps) {
   const navItems = [
     { label: 'Beranda', href: '/', icon: Home },
     { label: 'Transaksi', href: '/transaksi', icon: ReceiptText },
-    { label: 'Input AI', href: '/ai-input', icon: Sparkles, isHighlight: true },
-    { label: 'Analitik', href: '/analitik', icon: PieChart },
+    { label: 'Scan', href: '/ai-input', icon: Sparkles, isHighlight: true },
+    { label: 'Anggaran', href: '/analitik', icon: Wallet },
     { label: 'Pengaturan', href: '/pengaturan', icon: Settings },
   ];
 

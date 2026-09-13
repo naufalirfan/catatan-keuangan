@@ -183,5 +183,36 @@ export const getInitialTransactions = (userId: string = 'demo-user'): Transactio
       note: 'Top up GoPay mingguan',
       created_at: new Date().toISOString(),
     },
+    {
+      id: 'tx-split-demo',
+      user_id: userId,
+      type: 'expense',
+      amount: 250000,
+      category: '2 kategori',
+      category_icon: 'GitFork',
+      category_color: '#10B981',
+      account_id: 'acc-bca',
+      account_name: 'BCA Prioritas',
+      date: getOffsetDate(0),
+      time: '07:00',
+      note: 'Pembayaran utilitas & transport mingguan',
+      created_at: new Date().toISOString(),
+      splits: [
+        {
+          category: 'Tagihan, Listrik & Wifi',
+          category_icon: 'Zap',
+          category_color: '#EAB308',
+          percentage: 60,
+          amount: 150000,
+        },
+        {
+          category: 'Transportasi & Bensin',
+          category_icon: 'Car',
+          category_color: '#06B6D4',
+          percentage: 40,
+          amount: 100000,
+        },
+      ],
+    },
   ];
 };

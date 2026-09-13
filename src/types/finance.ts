@@ -1,5 +1,13 @@
 export type TransactionType = 'expense' | 'income' | 'transfer';
 
+export interface TransactionSplit {
+  category: string;
+  category_icon?: string;
+  category_color?: string;
+  amount: number;
+  percentage: number;
+}
+
 export interface Transaction {
   id: string;
   user_id: string;
@@ -16,6 +24,25 @@ export interface Transaction {
   time?: string; // HH:mm
   note: string;
   receipt_url?: string;
+  created_at: string;
+  splits?: TransactionSplit[];
+  admin_fee?: number;
+}
+
+export type DebtType = 'debt' | 'receivable'; // Hutang (saya berhutang) vs Piutang (orang lain berhutang)
+
+export interface DebtRecord {
+  id: string;
+  user_id?: string;
+  type: DebtType;
+  person_name: string;
+  title: string;
+  total_amount: number;
+  paid_amount: number;
+  due_date: string; // YYYY-MM-DD or YYYY-MM-DD HH:mm
+  status: 'unpaid' | 'paid';
+  note?: string;
+  account_id?: string;
   created_at: string;
 }
 

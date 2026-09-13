@@ -64,20 +64,20 @@ export default function Navbar() {
         <Link href="/" className="flex items-center gap-2.5 group">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 via-teal-500 to-cyan-500 p-0.5 shadow-md shadow-emerald-500/20 group-hover:scale-105 transition-transform flex items-center justify-center">
             <div className="w-full h-full bg-slate-900 rounded-[10px] flex items-center justify-center overflow-hidden p-1">
-              <img src="/flying-money.png" alt="DompetKu" className="w-full h-full object-contain drop-shadow" />
+              <img src="/flying-money.png" alt="KashFolio" className="w-full h-full object-contain drop-shadow" />
             </div>
           </div>
           <div>
             <div className="flex items-center gap-1.5">
               <span className="font-extrabold text-slate-900 dark:text-white text-base tracking-tight">
-                Dompet<span className="text-emerald-500">Ku</span>
+                Kash<span className="text-emerald-500">Folio</span>
               </span>
               <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800">
                 <Sparkles className="w-2.5 h-2.5 text-emerald-500" /> AI
               </span>
             </div>
             <p className="text-[10px] text-slate-400 dark:text-slate-500 -mt-0.5 hidden sm:block">
-              Pencatat Keuangan Cerdas
+              Money & Expense Tracker
             </p>
           </div>
         </Link>

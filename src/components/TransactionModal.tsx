@@ -14,7 +14,9 @@ import {
   Clock, 
   FileText, 
   Check,
-  Plus
+  Plus,
+  GitFork,
+  Trash2
 } from 'lucide-react';
 
 interface TransactionModalProps {
@@ -36,10 +38,18 @@ export default function TransactionModal({ isOpen, onClose, initialType = 'expen
   const [note, setNote] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
+  // Split transaction state
+  const [isSplit, setIsSplit] = useState(false);
+  const [splits, setSplits] = useState<Array<{ category: string; amount: number; percentage: number }>>([
+    { category: 'Tagihan, Listrik & Wifi', amount: 0, percentage: 60 },
+    { category: 'Transportasi & Bensin', amount: 0, percentage: 40 },
+  ]);
+
   useEffect(() => {
     if (isOpen) {
       setType(initialType);
       setAmount('');
+      setIsSplit(false);
       const today = new Date();
       setDate(today.toISOString().split('T')[0]);
       setTime(today.toTimeString().slice(0, 5));
@@ -62,6 +72,25 @@ export default function TransactionModal({ isOpen, onClose, initialType = 'expen
       setSelectedCategory(availableCats[0].name);
     }
   }, [type, categories]);
+
+  // Auto calculate split amounts when total amount or percentages change
+  useEffect(() => {
+    const numAmount = parseInt(amount.replace(/\D/g, ''), 10) || 0;
+    if (numAmount > 0 && isSplit) {
+      setSplits((prev) =>
+        prev.map((s, idx) => {
+          if (idx === prev.length - 1) {
+            // Balance remaining to make sum exact
+            const otherSum = prev
+              .slice(0, prev.length - 1)
+              .reduce((sum, item) => sum + Math.round((item.percentage / 100) * numAmount), 0);
+            return { ...s, amount: Math.max(0, numAmount - otherSum) };
+          }
+          return { ...s, amount: Math.round((s.percentage / 100) * numAmount) };
+        })
+      );
+    }
+  }, [amount, isSplit]);
 
   if (!isOpen) return null;
 
@@ -106,21 +135,49 @@ export default function TransactionModal({ isOpen, onClose, initialType = 'expen
     const toAcc = type === 'transfer' ? accounts.find((a) => a.id === toAccount) : undefined;
     const cat = categories.find((c) => c.name === selectedCategory);
 
+    // Prepare split data if split is active
+    let splitPayload = undefined;
+    if (type === 'expense' && isSplit && splits.length > 0) {
+      splitPayload = splits.map((s) => {
+        const matchCat = categories.find((c) => c.name === s.category);
+        return {
+          category: s.category,
+          category_icon: matchCat?.icon || 'Tag',
+          category_color: matchCat?.color || '#10B981',
+          amount: s.amount,
+          percentage: s.percentage,
+        };
+      });
+    }
+
     setIsSubmitting(true);
     try {
       await addTransaction({
         type,
         amount: numAmount,
-        category: type === 'transfer' ? 'Transfer Saldo' : selectedCategory,
-        category_icon: type === 'transfer' ? 'ArrowRightLeft' : cat?.icon,
-        category_color: type === 'transfer' ? '#6366F1' : cat?.color,
+        category: type === 'transfer' 
+          ? 'Transfer Saldo' 
+          : isSplit 
+          ? `${splits.length} kategori` 
+          : selectedCategory,
+        category_icon: type === 'transfer' 
+          ? 'ArrowRightLeft' 
+          : isSplit 
+          ? 'GitFork' 
+          : cat?.icon,
+        category_color: type === 'transfer' 
+          ? '#6366F1' 
+          : isSplit 
+          ? '#10B981' 
+          : cat?.color,
         account_id: selectedAccount,
         account_name: acc ? acc.name : 'Rekening',
         to_account_id: type === 'transfer' ? toAccount : undefined,
         to_account_name: toAcc ? toAcc.name : undefined,
         date: date || new Date().toISOString().split('T')[0],
         time: time || '12:00',
-        note: note.trim() || (type === 'transfer' ? `Transfer ke ${toAcc?.name}` : selectedCategory),
+        note: note.trim() || (type === 'transfer' ? `Transfer ke ${toAcc?.name}` : isSplit ? 'Bagi transaksi beberapa kategori' : selectedCategory),
+        splits: splitPayload,
       });
 
       confetti({
@@ -239,37 +296,149 @@ export default function TransactionModal({ isOpen, onClose, initialType = 'expen
 
           {/* Category Picker (if not transfer) */}
           {type !== 'transfer' && (
-            <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                Kategori
-              </label>
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-40 overflow-y-auto pr-1">
-                {filteredCategories.map((cat) => {
-                  const isSelected = selectedCategory === cat.name;
-                  return (
-                    <button
-                      key={cat.id}
-                      type="button"
-                      onClick={() => setSelectedCategory(cat.name)}
-                      className={`flex flex-col items-center p-2 rounded-xl border text-center transition-all ${
-                        isSelected
-                          ? 'border-emerald-500 bg-emerald-50/80 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 font-semibold shadow-sm'
-                          : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+            <div className="space-y-3">
+              {type === 'expense' && (
+                <div className="flex items-center justify-between p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/80 dark:border-slate-700">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400">
+                      <GitFork className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-slate-800 dark:text-white">
+                        Bagi ke Banyak Kategori (Split)
+                      </p>
+                      <p className="text-[10px] text-slate-400">
+                        Satu pembayaran, beberapa kategori sekaligus
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsSplit(!isSplit)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      isSplit ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        isSplit ? 'translate-x-6' : 'translate-x-1'
                       }`}
-                    >
-                      <div 
-                        className="w-8 h-8 rounded-lg flex items-center justify-center text-white mb-1 shadow-sm"
-                        style={{ backgroundColor: cat.color }}
-                      >
-                        <CategoryIcon name={cat.icon} className="w-4 h-4" />
+                    />
+                  </button>
+                </div>
+              )}
+
+              {isSplit && type === 'expense' ? (
+                <div className="space-y-2.5 p-3 rounded-2xl bg-emerald-50/40 dark:bg-emerald-950/20 border border-emerald-200/80 dark:border-emerald-900/40">
+                  <div className="flex items-center justify-between text-xs font-bold text-slate-800 dark:text-slate-200">
+                    <span>Rincian Pembagian Kategori</span>
+                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400">
+                      {splits.length} Kategori
+                    </span>
+                  </div>
+
+                  <div className="space-y-2">
+                    {splits.map((s, idx) => (
+                      <div key={idx} className="flex items-center gap-2 p-2 rounded-xl bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-700 shadow-xs">
+                        <select
+                          value={s.category}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setSplits((prev) => prev.map((item, i) => (i === idx ? { ...item, category: val } : item)));
+                          }}
+                          className="flex-1 py-1.5 px-2 rounded-lg bg-slate-50 dark:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700"
+                        >
+                          {filteredCategories.map((c) => (
+                            <option key={c.id} value={c.name}>
+                              {c.name}
+                            </option>
+                          ))}
+                        </select>
+
+                        <div className="flex items-center gap-1 w-20">
+                          <input
+                            type="number"
+                            min="1"
+                            max="100"
+                            value={s.percentage}
+                            onChange={(e) => {
+                              const val = Math.max(1, Math.min(100, parseInt(e.target.value, 10) || 0));
+                              const numAmount = parseInt(amount.replace(/\D/g, ''), 10) || 0;
+                              setSplits((prev) =>
+                                prev.map((item, i) =>
+                                  i === idx ? { ...item, percentage: val, amount: Math.round((val / 100) * numAmount) } : item
+                                )
+                              );
+                            }}
+                            className="w-12 py-1 px-1.5 text-center text-xs font-bold rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                          />
+                          <span className="text-xs font-bold text-slate-400">%</span>
+                        </div>
+
+                        <span className="text-xs font-black text-slate-800 dark:text-white w-24 text-right">
+                          Rp {s.amount.toLocaleString('id-ID')}
+                        </span>
+
+                        {splits.length > 2 && (
+                          <button
+                            type="button"
+                            onClick={() => setSplits((prev) => prev.filter((_, i) => i !== idx))}
+                            className="p-1 text-slate-400 hover:text-rose-500"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
-                      <span className="text-[10px] leading-tight line-clamp-2">
-                        {cat.name}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
+                    ))}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const unusedCat = filteredCategories.find((c) => !splits.some((s) => s.category === c.name));
+                      const catName = unusedCat ? unusedCat.name : filteredCategories[0]?.name || 'Makanan & Minuman';
+                      const numAmount = parseInt(amount.replace(/\D/g, ''), 10) || 0;
+                      setSplits((prev) => [...prev, { category: catName, percentage: 20, amount: Math.round(0.2 * numAmount) }]);
+                    }}
+                    className="w-full py-2 rounded-xl border border-dashed border-emerald-400 text-emerald-600 dark:text-emerald-400 text-xs font-bold hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-colors"
+                  >
+                    + Tambah Kategori Split
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                    Kategori
+                  </label>
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-40 overflow-y-auto pr-1">
+                    {filteredCategories.map((cat) => {
+                      const isSelected = selectedCategory === cat.name;
+                      return (
+                        <button
+                          key={cat.id}
+                          type="button"
+                          onClick={() => setSelectedCategory(cat.name)}
+                          className={`flex flex-col items-center p-2 rounded-xl border text-center transition-all ${
+                            isSelected
+                              ? 'border-emerald-500 bg-emerald-50/80 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 font-semibold shadow-sm'
+                              : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                          }`}
+                        >
+                          <div 
+                            className="w-8 h-8 rounded-lg flex items-center justify-center text-white mb-1 shadow-sm"
+                            style={{ backgroundColor: cat.color }}
+                          >
+                            <CategoryIcon name={cat.icon} className="w-4 h-4" />
+                          </div>
+                          <span className="text-[10px] leading-tight line-clamp-2">
+                            {cat.name}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

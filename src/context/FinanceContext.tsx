@@ -7,6 +7,7 @@ import {
   Category, 
   Budget, 
   SavingsGoal,
+  DebtRecord,
   AiConfig, 
   UserProfile, 
   TransactionType,
@@ -55,6 +56,7 @@ interface FinanceContextType {
   categories: Category[];
   budgets: Budget[];
   savingsGoals: SavingsGoal[];
+  debts: DebtRecord[];
   aiConfig: AiConfig;
 
   // Actions
@@ -64,6 +66,7 @@ interface FinanceContextType {
   addAccount: (account: Omit<Account, 'id'>) => void;
   updateAccount: (id: string, updates: Partial<Account>) => void;
   deleteAccount: (id: string) => void;
+  transferBalance: (fromAccountId: string, toAccountId: string, amount: number, adminFee?: number, date?: string, time?: string, note?: string) => Promise<void>;
   addCategory: (category: Omit<Category, 'id'>) => Category;
   updateCategory: (id: string, updates: Partial<Omit<Category, 'id'>>) => void;
   deleteCategory: (id: string) => void;
@@ -74,6 +77,10 @@ interface FinanceContextType {
   updateSavingsGoal: (id: string, updates: Partial<SavingsGoal>) => void;
   deleteSavingsGoal: (id: string) => void;
   depositToSavingsGoal: (id: string, amount: number, accountId?: string) => void;
+  addDebt: (debt: Omit<DebtRecord, 'id' | 'created_at'>) => DebtRecord;
+  updateDebt: (id: string, updates: Partial<DebtRecord>) => void;
+  deleteDebt: (id: string) => void;
+  recordDebtPayment: (id: string, amount: number) => void;
   updateAiConfig: (config: Partial<AiConfig>) => void;
 
   // Filters
@@ -121,6 +128,7 @@ const STORAGE_KEYS = {
   CATEGORIES: (uid: string) => `catatankeuangan_cat_${uid}`,
   BUDGETS: (uid: string) => `catatankeuangan_budgets_${uid}`,
   SAVINGS_GOALS: (uid: string) => `catatankeuangan_savings_goals_${uid}`,
+  DEBTS: (uid: string) => `catatankeuangan_debts_${uid}`,
   AI_CONFIG: 'catatankeuangan_ai_config',
   MEMBERS: 'catatankeuangan_members_registry',
   PRO_POPUP_SEEN: (uid: string) => `catatankeuangan_pro_popup_seen_${uid}`,
@@ -162,6 +170,57 @@ const DEFAULT_SAVINGS_GOALS: SavingsGoal[] = [
   },
 ];
 
+const DEFAULT_DEBTS: DebtRecord[] = [
+  {
+    id: 'debt-1',
+    type: 'debt',
+    person_name: 'Edward',
+    title: 'jajanan & minuman',
+    total_amount: 54000,
+    paid_amount: 10000,
+    due_date: '2026-08-01 12:40',
+    status: 'unpaid',
+    note: 'Jajanan kantor & makan siang',
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 'debt-2',
+    type: 'debt',
+    person_name: 'Djames',
+    title: 'makan',
+    total_amount: 120000,
+    paid_amount: 0,
+    due_date: '2026-08-20 12:00',
+    status: 'unpaid',
+    note: 'Traktir makan bareng tim',
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 'debt-3',
+    type: 'debt',
+    person_name: 'Andreas Dimz',
+    title: 'Beli HP',
+    total_amount: 1000000,
+    paid_amount: 250000,
+    due_date: '2026-09-01 21:36',
+    status: 'unpaid',
+    note: 'Cicilan pembelian smartphone',
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 'debt-4',
+    type: 'debt',
+    person_name: 'Davin',
+    title: 'Servis Motor',
+    total_amount: 300000,
+    paid_amount: 300000,
+    due_date: '2026-07-15 10:00',
+    status: 'paid',
+    note: 'Lunas ganti oli & sparepart',
+    created_at: new Date().toISOString(),
+  },
+];
+
 const DEFAULT_AI_CONFIG: AiConfig = {
   provider: 'custom',
   geminiApiKey: process.env.NEXT_PUBLIC_GEMINI_API_KEY || '',
@@ -197,6 +256,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES);
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [savingsGoals, setSavingsGoals] = useState<SavingsGoal[]>([]);
+  const [debts, setDebts] = useState<DebtRecord[]>([]);
   const [aiConfig, setAiConfig] = useState<AiConfig>(DEFAULT_AI_CONFIG);
 
   // Filters
@@ -327,6 +387,22 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       setSavingsGoals(DEFAULT_SAVINGS_GOALS);
       try {
         localStorage.setItem(STORAGE_KEYS.SAVINGS_GOALS(uid), JSON.stringify(DEFAULT_SAVINGS_GOALS));
+      } catch {}
+    }
+
+    // Load Debts
+    const savedDebts = localStorage.getItem(STORAGE_KEYS.DEBTS(uid));
+    if (savedDebts) {
+      try {
+        const parsed = JSON.parse(savedDebts);
+        setDebts(Array.isArray(parsed) && parsed.length > 0 ? parsed : DEFAULT_DEBTS);
+      } catch {
+        setDebts(DEFAULT_DEBTS);
+      }
+    } else {
+      setDebts(DEFAULT_DEBTS);
+      try {
+        localStorage.setItem(STORAGE_KEYS.DEBTS(uid), JSON.stringify(DEFAULT_DEBTS));
       } catch {}
     }
   }, []);
@@ -713,9 +789,9 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
   // Account actions
   const addAccount = (accData: Omit<Account, 'id'>) => {
-    if (userPlan === 'free' && accounts.length >= 3) {
+    if (userPlan === 'free' && !isSuperAdmin && accounts.length >= 2) {
       setShowPlanModal(true);
-      alert('Mode Free terbatas maksimal 3 rekening/dompet. Aktifkan Mode PRO untuk menambah dompet tanpa batas!');
+      alert('Batas Akun Free: Maksimal 2 rekening/dompet. Aktifkan Mode PRO untuk menambah dompet & rekening tanpa batas!');
       return;
     }
     const newAcc: Account = {
@@ -731,6 +807,63 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
   const deleteAccount = (id: string) => {
     persistAccounts(accounts.filter((a) => a.id !== id));
+  };
+
+  const transferBalance = async (
+    fromAccountId: string,
+    toAccountId: string,
+    amount: number,
+    adminFee: number = 0,
+    date?: string,
+    time?: string,
+    note?: string
+  ) => {
+    const fromAcc = accounts.find((a) => a.id === fromAccountId);
+    const toAcc = accounts.find((a) => a.id === toAccountId);
+    if (!fromAcc || !toAcc) {
+      alert('Rekening asal atau tujuan transfer tidak valid');
+      throw new Error('Rekening asal atau tujuan tidak valid');
+    }
+    const totalDeduction = amount + adminFee;
+    if (fromAcc.balance < totalDeduction) {
+      alert(`Saldo ${fromAcc.name} tidak cukup (Saldo: Rp ${fromAcc.balance.toLocaleString('id-ID')}, Dibutuhkan: Rp ${totalDeduction.toLocaleString('id-ID')})`);
+      throw new Error('Saldo tidak mencukupi');
+    }
+
+    const txDate = date || new Date().toISOString().split('T')[0];
+    const txTime = time || new Date().toTimeString().slice(0, 5);
+
+    const updatedAccounts = accounts.map((acc) => {
+      if (acc.id === fromAccountId) {
+        return { ...acc, balance: acc.balance - totalDeduction };
+      }
+      if (acc.id === toAccountId) {
+        return { ...acc, balance: acc.balance + amount };
+      }
+      return acc;
+    });
+    persistAccounts(updatedAccounts);
+
+    const transferTx: Transaction = {
+      id: `tx-tf-${Date.now()}`,
+      user_id: user?.id || 'demo-user',
+      type: 'transfer',
+      amount,
+      category: 'Transfer Saldo',
+      category_icon: 'ArrowRightLeft',
+      category_color: '#6366F1',
+      account_id: fromAccountId,
+      account_name: fromAcc.name,
+      to_account_id: toAccountId,
+      to_account_name: toAcc.name,
+      date: txDate,
+      time: txTime,
+      admin_fee: adminFee,
+      note: note || `Transfer dari ${fromAcc.name} ke ${toAcc.name}${adminFee > 0 ? ` (Biaya Admin Rp ${adminFee.toLocaleString('id-ID')})` : ''}`,
+      created_at: new Date().toISOString(),
+    };
+
+    persistTransactions([transferTx, ...transactions]);
   };
 
   // Category Management
@@ -769,6 +902,12 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const updateBudget = (category: string, limit: number) => {
     const currentMonth = new Date().toISOString().slice(0, 7);
     const existing = budgets.find((b) => b.category === category && b.month === currentMonth);
+    if (!existing && userPlan === 'free' && !isSuperAdmin && budgets.length >= 2) {
+      setShowPlanModal(true);
+      alert('Batas Akun Free: Maksimal 2 anggaran kategori. Tingkatkan ke PRO untuk mengatur anggaran tanpa batas!');
+      return;
+    }
+
     let newBudgets: Budget[];
     if (existing) {
       newBudgets = budgets.map((b) => (b.id === existing.id ? { ...b, limit_amount: limit } : b));
@@ -808,6 +947,11 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   };
 
   const addSavingsGoal = (goalData: Omit<SavingsGoal, 'id' | 'created_at'>) => {
+    if (userPlan === 'free' && !isSuperAdmin && savingsGoals.length >= 2) {
+      setShowPlanModal(true);
+      alert('Batas Akun Free: Maksimal 2 target tabungan. Tingkatkan ke PRO untuk target tanpa batas!');
+      return;
+    }
     const newGoal: SavingsGoal = {
       ...goalData,
       id: `sg-${Date.now()}`,
@@ -847,6 +991,65 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         });
       }
     }
+  };
+
+  // Debt Actions (Belum & Sudah Lunas)
+  const persistDebts = (newDebts: DebtRecord[]) => {
+    setDebts(newDebts);
+    const uid = user?.id || 'demo-user';
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(STORAGE_KEYS.DEBTS(uid), JSON.stringify(newDebts));
+      } catch {}
+    }
+  };
+
+  const addDebt = (debtData: Omit<DebtRecord, 'id' | 'created_at'>): DebtRecord => {
+    if (userPlan === 'free' && !isSuperAdmin) {
+      const activeUnpaidCount = debts.filter((d) => d.status === 'unpaid').length;
+      if (activeUnpaidCount >= 3) {
+        setShowPlanModal(true);
+        alert('Batas Akun Free: Maksimal 3 catatan hutang aktif. Aktifkan Mode PRO untuk pencatatan hutang tanpa batas!');
+        throw new Error('Batas akun free tercapai');
+      }
+    }
+
+    const newDebt: DebtRecord = {
+      ...debtData,
+      id: `debt-${Date.now()}`,
+      created_at: new Date().toISOString(),
+    };
+    persistDebts([newDebt, ...debts]);
+    return newDebt;
+  };
+
+  const updateDebt = (id: string, updates: Partial<DebtRecord>) => {
+    const updated = debts.map((d) => {
+      if (d.id === id) {
+        const res = { ...d, ...updates };
+        if (res.paid_amount >= res.total_amount) {
+          res.status = 'paid' as const;
+        }
+        return res;
+      }
+      return d;
+    });
+    persistDebts(updated);
+  };
+
+  const deleteDebt = (id: string) => {
+    persistDebts(debts.filter((d) => d.id !== id));
+  };
+
+  const recordDebtPayment = (id: string, amount: number) => {
+    const target = debts.find((d) => d.id === id);
+    if (!target) return;
+    const newPaid = target.paid_amount + amount;
+    const isNowPaid = newPaid >= target.total_amount;
+    updateDebt(id, {
+      paid_amount: newPaid,
+      status: isNowPaid ? 'paid' : target.status,
+    });
   };
 
   // AI Config
@@ -889,7 +1092,13 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     monthTransactions
       .filter((t) => t.type === 'expense')
       .forEach((t) => {
-        catMap.set(t.category, (catMap.get(t.category) || 0) + t.amount);
+        if (t.splits && t.splits.length > 0) {
+          t.splits.forEach((s) => {
+            catMap.set(s.category, (catMap.get(s.category) || 0) + s.amount);
+          });
+        } else {
+          catMap.set(t.category, (catMap.get(t.category) || 0) + t.amount);
+        }
       });
 
     const total = Array.from(catMap.values()).reduce((a, b) => a + b, 0) || 1;
@@ -981,74 +1190,106 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
       const worksheet = XLSX.utils.json_to_sheet(data);
       const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Laporan Keuangan');
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Transaksi');
 
-      worksheet['!cols'] = [
+      const colWidths = [
         { wch: 6 },
         { wch: 14 },
         { wch: 10 },
-        { wch: 15 },
+        { wch: 14 },
+        { wch: 22 },
+        { wch: 16 },
         { wch: 24 },
-        { wch: 18 },
         { wch: 24 },
-        { wch: 24 },
-        { wch: 38 },
+        { wch: 32 },
       ];
+      worksheet['!cols'] = colWidths;
 
-      XLSX.writeFile(workbook, `Laporan_Keuangan_${new Date().toISOString().split('T')[0]}.xlsx`);
+      const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Laporan_Keuangan_PRO_${new Date().toISOString().split('T')[0]}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     } catch (err) {
-      console.error('Gagal export excel:', err);
-      alert('Terjadi kesalahan saat memproses file Excel.');
+      console.error('Failed to export Excel:', err);
+      alert('Gagal mengekspor data Excel. Silakan gunakan format CSV.');
     }
-  }, [userPlan, isSuperAdmin, transactions]);
+  }, [transactions, userPlan, isSuperAdmin, setShowPlanModal]);
 
   const exportToJson = () => {
     const data = {
-      version: '1.0',
+      version: '2.0.0',
       exported_at: new Date().toISOString(),
-      user,
+      user_email: user?.email,
       transactions,
       accounts,
       categories,
       budgets,
+      savingsGoals,
+      debts,
     };
-    const jsonStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(data, null, 2));
+    const jsonStr = JSON.stringify(data, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.setAttribute('href', jsonStr);
-    link.setAttribute('download', `Backup_Catatan_Keuangan_${new Date().toISOString().split('T')[0]}.json`);
+    link.href = url;
+    link.setAttribute('download', `Catatan_Keuangan_Backup_${new Date().toISOString().split('T')[0]}.json`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  const importFromJson = (jsonData: string): boolean => {
+  const importFromJson = (jsonStr: string): boolean => {
     try {
-      const parsed = JSON.parse(jsonData);
-      if (Array.isArray(parsed.transactions)) {
-        persistTransactions(parsed.transactions);
+      const parsed = JSON.parse(jsonStr);
+      if (!parsed || (!parsed.transactions && !Array.isArray(parsed))) {
+        return false;
       }
-      if (Array.isArray(parsed.accounts)) {
+
+      const uid = user ? user.id : 'demo-user';
+      const newTx: Transaction[] = (parsed.transactions || parsed).map((t: any) => ({
+        ...t,
+        user_id: uid,
+      }));
+
+      persistTransactions(newTx);
+
+      if (Array.isArray(parsed.accounts) && parsed.accounts.length > 0) {
         persistAccounts(parsed.accounts);
       }
-      if (Array.isArray(parsed.categories)) {
-        setCategories(parsed.categories);
+      if (Array.isArray(parsed.categories) && parsed.categories.length > 0) {
+        persistCategories(parsed.categories);
+      }
+      if (Array.isArray(parsed.budgets) && parsed.budgets.length > 0) {
+        setBudgets(parsed.budgets);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(STORAGE_KEYS.BUDGETS(uid), JSON.stringify(parsed.budgets));
+        }
+      }
+      if (Array.isArray(parsed.savingsGoals) && parsed.savingsGoals.length > 0) {
+        persistSavingsGoals(parsed.savingsGoals);
+      }
+      if (Array.isArray(parsed.debts) && parsed.debts.length > 0) {
+        persistDebts(parsed.debts);
       }
       return true;
-    } catch (e) {
-      console.error('Failed to import JSON data:', e);
+    } catch {
       return false;
     }
   };
 
   const importFromCkbakFile = async (file: File): Promise<{ success: boolean; count: number; message: string }> => {
     try {
-      const buffer = await file.arrayBuffer();
       let parsedTxs: Transaction[] = [];
+      const buffer = await file.arrayBuffer();
 
       try {
         parsedTxs = await parseCkbakArrayBuffer(buffer, user?.id || 'demo-user');
-      } catch (clientErr) {
-        console.warn('Parsing ckbak di browser gagal, mencoba fallback ke API...', clientErr);
+      } catch {
         const formData = new FormData();
         formData.append('file', file);
         const res = await fetch('/api/parse-ckbak', { method: 'POST', body: formData });
@@ -1203,6 +1444,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         addAccount,
         updateAccount,
         deleteAccount,
+        transferBalance,
         addCategory,
         updateCategory,
         deleteCategory,
@@ -1213,6 +1455,11 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         updateSavingsGoal,
         deleteSavingsGoal,
         depositToSavingsGoal,
+        debts,
+        addDebt,
+        updateDebt,
+        deleteDebt,
+        recordDebtPayment,
         updateAiConfig,
         filterPeriod,
         setFilterPeriod,

@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import SuperAdminMemberManager from '@/components/SuperAdminMemberManager';
 import CategoryManager from '@/components/CategoryManager';
+import GoogleDriveModal from '@/components/GoogleDriveModal';
 
 export default function PengaturanPage() {
   const { 
@@ -53,6 +54,8 @@ export default function PengaturanPage() {
     loadNaufalBackupData,
     resetToDefault
   } = useFinance();
+
+  const [isDriveModalOpen, setIsDriveModalOpen] = useState(false);
 
   // Local form state for AI settings
   const [provider, setProvider] = useState<'gemini' | 'custom' | 'auto'>(aiConfig.provider || 'custom');
@@ -1408,6 +1411,12 @@ export default function PengaturanPage() {
           </button>
         </div>
       </div>
+
+      {/* Google Drive Backup Modal */}
+      <GoogleDriveModal
+        isOpen={isDriveModalOpen}
+        onClose={() => setIsDriveModalOpen(false)}
+      />
 
     </div>
   );

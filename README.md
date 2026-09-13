@@ -1,11 +1,11 @@
-# DompetKu AI • Catatan Keuangan Pintar Mobile-Friendly
+# KashFolio: Money & Expense Tracker • by Naufal
 
 <div align="center">
-
-  <img src="docs/screenshot.png" alt="Antarmuka DompetKu AI" width="100%" style="border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.3); margin-bottom: 20px;" />
-
-  # 💸 DompetKu AI
-  ### Aplikasi Pencatat Keuangan Pintar & Modern Berbasis AI Mobile-First
+  <img src="docs/screenshot.png" alt="Antarmuka KashFolio" width="100%" style="border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.3); margin-bottom: 20px;" />
+  
+  # 💸 KashFolio: Money & Expense Tracker
+  <p><strong>Aplikasi Keuangan Cerdas Mobile-First: Multi-Akun, Split Transaksi, Catatan Hutang, Auto-Switch AI, dan Backup Google Drive.</strong></p>
+</div>
 
   Dibuat dan Dikembangkan dengan ❤️ oleh **[Naufal Irfansyah](https://www.instagram.com/naufal_irfansyah)** ([@naufal_irfansyah](https://www.instagram.com/naufal_irfansyah))
 

@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useFinance } from '@/context/FinanceContext';
 import CategoryIcon from '@/components/CategoryIcon';
 import TransactionModal from '@/components/TransactionModal';
+import TransferSaldoModal from '@/components/TransferSaldoModal';
+import GoogleDriveModal from '@/components/GoogleDriveModal';
 import { TransactionType } from '@/types/finance';
 import { 
   TrendingUp, 
@@ -20,7 +22,10 @@ import {
   Crown,
   Trash2,
   ShieldCheck,
-  Zap
+  Zap,
+  Cloud,
+  Users,
+  CheckCircle2
 } from 'lucide-react';
 import SuperAdminMemberManager from '@/components/SuperAdminMemberManager';
 import SavingsGoalModal from '@/components/SavingsGoalModal';
@@ -44,11 +49,14 @@ export default function DashboardPage() {
     deleteTransaction,
     budgets,
     savingsGoals,
+    debts,
   } = useFinance();
 
   const [isBalanceHidden, setIsBalanceHidden] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalType, setModalType] = useState<TransactionType>('expense');
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [isDriveModalOpen, setIsDriveModalOpen] = useState(false);
 
   // Savings Goal Quick Modal
   const [isSavingsModalOpen, setIsSavingsModalOpen] = useState(false);
@@ -211,7 +219,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Quick Action Buttons */}
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
         <button
           onClick={() => openManualModal('expense')}
           className="flex flex-col items-center gap-1.5 p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm hover:border-emerald-500 transition-all active:scale-95 group"
@@ -236,27 +244,51 @@ export default function DashboardPage() {
           </span>
         </Link>
 
-        <Link
-          href="/ai-input"
-          className="flex flex-col items-center gap-1.5 p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm hover:border-emerald-500 transition-all active:scale-95 group"
-        >
-          <div className="p-2.5 rounded-xl bg-cyan-50 dark:bg-cyan-950/60 text-cyan-600 dark:text-cyan-400 group-hover:scale-110 transition-transform">
-            <Camera className="w-5 h-5" />
-          </div>
-          <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
-            Struk Foto
-          </span>
-        </Link>
-
         <button
-          onClick={() => openManualModal('transfer')}
-          className="flex flex-col items-center gap-1.5 p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm hover:border-emerald-500 transition-all active:scale-95 group"
+          onClick={() => setIsTransferModalOpen(true)}
+          className="flex flex-col items-center gap-1.5 p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm hover:border-sky-500 transition-all active:scale-95 group"
         >
-          <div className="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform">
+          <div className="p-2.5 rounded-xl bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 group-hover:scale-110 transition-transform">
             <ArrowRightLeft className="w-5 h-5" />
           </div>
           <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
             Transfer
+          </span>
+        </button>
+
+        <Link
+          href="/rekening"
+          className="flex flex-col items-center gap-1.5 p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm hover:border-blue-500 transition-all active:scale-95 group"
+        >
+          <div className="p-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform">
+            <Wallet className="w-5 h-5" />
+          </div>
+          <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+            Rekening
+          </span>
+        </Link>
+
+        <Link
+          href="/hutang"
+          className="flex flex-col items-center gap-1.5 p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm hover:border-indigo-500 transition-all active:scale-95 group"
+        >
+          <div className="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform">
+            <Users className="w-5 h-5" />
+          </div>
+          <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+            Hutang
+          </span>
+        </Link>
+
+        <button
+          onClick={() => setIsDriveModalOpen(true)}
+          className="flex flex-col items-center gap-1.5 p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm hover:border-sky-500 transition-all active:scale-95 group"
+        >
+          <div className="p-2.5 rounded-xl bg-cyan-50 dark:bg-cyan-950/60 text-cyan-600 dark:text-cyan-400 group-hover:scale-110 transition-transform">
+            <Cloud className="w-5 h-5" />
+          </div>
+          <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+            G-Drive
           </span>
         </button>
       </div>
@@ -268,16 +300,20 @@ export default function DashboardPage() {
             <Wallet className="w-4 h-4 text-emerald-500" />
             Rekening & Dompet
           </h2>
-          <span className="text-xs text-slate-400">
-            {accounts.length} Akun
-          </span>
+          <Link
+            href="/rekening"
+            className="text-xs font-bold text-sky-600 dark:text-sky-400 hover:underline flex items-center gap-1"
+          >
+            Kelola ({accounts.length}) ➔
+          </Link>
         </div>
 
         <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none snap-x">
           {accounts.map((acc) => (
-            <div
+            <Link
               key={acc.id}
-              className="min-w-[170px] snap-start p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col justify-between"
+              href="/rekening"
+              className="min-w-[170px] snap-start p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col justify-between hover:border-sky-500 transition-colors"
             >
               <div className="flex items-center justify-between mb-3">
                 <span 
@@ -298,10 +334,55 @@ export default function DashboardPage() {
                   {isBalanceHidden ? '••••••' : `Rp ${acc.balance.toLocaleString('id-ID')}`}
                 </p>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       </div>
+
+      {/* Catatan Hutang Widget */}
+      {debts && debts.length > 0 && (
+        <div className="p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                <Users className="w-4 h-4 text-indigo-500" />
+                Catatan Hutang & Piutang
+              </h2>
+              <p className="text-[10px] text-slate-400">
+                {debts.filter(d => d.status === 'unpaid').length} transaksi belum lunas
+              </p>
+            </div>
+            <Link href="/hutang" className="text-xs font-bold text-indigo-600 dark:text-indigo-400 flex items-center gap-0.5">
+              Lihat Semua <ChevronRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            {debts.filter(d => d.status === 'unpaid').slice(0, 2).map((debt) => (
+              <Link
+                key={debt.id}
+                href="/hutang"
+                className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700 hover:border-indigo-400 transition-colors"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
+                    {debt.person_name}
+                  </span>
+                  <span className="text-[9px] font-bold text-rose-500">
+                    Jatuh Tempo
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-400 truncate mt-0.5">
+                  {debt.title}
+                </p>
+                <p className="text-xs font-black text-slate-900 dark:text-white mt-2">
+                  Rp {(debt.total_amount - debt.paid_amount).toLocaleString('id-ID')}
+                </p>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Mini Spending Breakdown */}
       {categoryExpensesMonth.length > 0 && (
@@ -487,6 +568,18 @@ export default function DashboardPage() {
         onClose={() => setIsSavingsModalOpen(false)}
         goalToEdit={selectedGoalForModal}
         mode={savingsModalMode}
+      />
+
+      {/* Transfer Saldo Modal */}
+      <TransferSaldoModal
+        isOpen={isTransferModalOpen}
+        onClose={() => setIsTransferModalOpen(false)}
+      />
+
+      {/* Google Drive Backup Modal */}
+      <GoogleDriveModal
+        isOpen={isDriveModalOpen}
+        onClose={() => setIsDriveModalOpen(false)}
       />
 
     </div>

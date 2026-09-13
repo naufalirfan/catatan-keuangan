@@ -78,10 +78,10 @@ export default function AuthGate({ children }: AuthGateProps) {
       <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
         <div className="flex flex-col items-center gap-3">
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg shadow-emerald-500/30 animate-bounce p-2.5">
-            <img src="/flying-money.png" alt="DompetKu AI" className="w-full h-full object-contain drop-shadow" />
+            <img src="/flying-money.png" alt="KashFolio" className="w-full h-full object-contain drop-shadow" />
           </div>
           <p className="text-xs font-semibold text-slate-500 tracking-wider uppercase animate-pulse">
-            Memuat DompetKu AI...
+            Memuat KashFolio...
           </p>
         </div>
       </div>
@@ -101,13 +101,16 @@ export default function AuthGate({ children }: AuthGateProps) {
         {/* Logo & Headline */}
         <div className="text-center space-y-2">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-gradient-to-tr from-emerald-500 via-teal-500 to-cyan-500 text-white shadow-xl shadow-emerald-500/25 mb-1 p-3">
-            <img src="/flying-money.png" alt="DompetKu AI" className="w-full h-full object-contain drop-shadow" />
+            <img src="/flying-money.png" alt="KashFolio" className="w-full h-full object-contain drop-shadow" />
           </div>
           <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-            Dompet<span className="text-emerald-500">Ku</span> AI
+            Kash<span className="text-emerald-500">Folio</span>
           </h1>
+          <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+            Money & Expense Tracker
+          </p>
           <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs mx-auto">
-            Pencatatan keuangan modern dengan kecerdasan Gemini AI, multi-dompet & visualisasi analitik real-time.
+            Pencatatan keuangan modern dengan kecerdasan Gemini AI, multi-rekening & visualisasi analitik real-time.
           </p>
         </div>
 

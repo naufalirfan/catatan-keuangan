@@ -4,7 +4,8 @@ import React, { useState } from 'react';
 import { useFinance } from '@/context/FinanceContext';
 import CategoryIcon from '@/components/CategoryIcon';
 import TransactionModal from '@/components/TransactionModal';
-import { TransactionType } from '@/types/finance';
+import TransactionDetailModal from '@/components/TransactionDetailModal';
+import { Transaction, TransactionType } from '@/types/finance';
 import { 
   Search, 
   Filter, 
@@ -15,7 +16,8 @@ import {
   ArrowUpCircle, 
   ArrowRightLeft,
   X,
-  FileSpreadsheet
+  FileSpreadsheet,
+  GitFork
 } from 'lucide-react';
 
 export default function TransaksiPage() {
@@ -40,6 +42,8 @@ export default function TransaksiPage() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
 
   // Group transactions by date
   const groupedTransactions = filteredTransactions.reduce<Record<string, typeof filteredTransactions>>((acc, tx) => {
@@ -47,6 +51,30 @@ export default function TransaksiPage() {
     acc[tx.date].push(tx);
     return acc;
   }, {});
+
+  const formatHeaderDate = (dateStr: string) => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (dateStr === todayStr) return 'Hari Ini';
+    try {
+      const parts = dateStr.split('-');
+      if (parts.length === 3) {
+        const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+        return new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }).format(d);
+      }
+    } catch {}
+    return dateStr;
+  };
+
+  const formatCompactCurrency = (amount: number) => {
+    const abs = Math.abs(amount);
+    if (abs >= 1000000) {
+      return `${amount > 0 ? '+' : '-'}Rp ${(abs / 1000000).toFixed(1).replace('.0', '')}M`;
+    }
+    if (abs >= 1000) {
+      return `${amount > 0 ? '+' : '-'}Rp ${(abs / 1000).toFixed(0)}K`;
+    }
+    return `${amount > 0 ? '+' : '-'}Rp ${abs.toLocaleString('id-ID')}`;
+  };
 
   const totalFilteredExpense = filteredTransactions
     .filter((t) => t.type === 'expense')
@@ -258,91 +286,140 @@ export default function TransaksiPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          {Object.entries(groupedTransactions).map(([dateStr, items]) => (
-            <div key={dateStr} className="space-y-1.5">
-              <div className="flex items-center justify-between px-1">
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                  {dateStr}
-                </span>
-                <span className="text-[10px] text-slate-400">
-                  {items.length} transaksi
-                </span>
-              </div>
+          {Object.entries(groupedTransactions).map(([dateStr, items]) => {
+            const netDay = items.reduce((sum, tx) => {
+              if (tx.type === 'income') return sum + tx.amount;
+              if (tx.type === 'expense') return sum - tx.amount;
+              return sum;
+            }, 0);
 
-              <div className="space-y-1.5">
-                {items.map((tx) => (
-                  <div
-                    key={tx.id}
-                    className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center justify-between group hover:border-slate-300 dark:hover:border-slate-700 transition-colors"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
+            return (
+              <div key={dateStr} className="space-y-1.5">
+                {/* Date Header with Daily Net Amount (Screenshot 4) */}
+                <div className="flex items-center justify-between px-1">
+                  <span className="text-xs font-bold text-slate-900 dark:text-white">
+                    {formatHeaderDate(dateStr)}
+                  </span>
+                  <span className={`text-[11px] font-bold ${
+                    netDay > 0 
+                      ? 'text-emerald-500' 
+                      : netDay < 0 
+                      ? 'text-rose-500' 
+                      : 'text-slate-400'
+                  }`}>
+                    {formatCompactCurrency(netDay)}
+                  </span>
+                </div>
+
+                <div className="space-y-1.5">
+                  {items.map((tx) => {
+                    const isSplit = Array.isArray(tx.splits) && tx.splits.length > 0;
+
+                    return (
                       <div
-                        className="w-10 h-10 rounded-xl flex items-center justify-center text-white shrink-0 shadow-sm"
-                        style={{ backgroundColor: tx.category_color || '#3B82F6' }}
-                      >
-                        <CategoryIcon name={tx.category_icon || 'Wallet'} className="w-5 h-5" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
-                          {tx.note || tx.category}
-                        </p>
-                        <p className="text-[10px] text-slate-400 flex items-center gap-1.5 mt-0.5">
-                          <span>
-                            {tx.type === 'transfer'
-                              ? `${tx.account_name} ➔ ${tx.to_account_name || 'Rekening'}`
-                              : tx.account_name}
-                          </span>
-                          {tx.time && (
-                            <>
-                              <span>•</span>
-                              <span>{tx.time}</span>
-                            </>
-                          )}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <div className="text-right">
-                        <span className={`text-xs font-black block ${
-                          tx.type === 'expense'
-                            ? 'text-rose-500'
-                            : tx.type === 'income'
-                            ? 'text-emerald-500'
-                            : 'text-indigo-500'
-                        }`}>
-                          {tx.type === 'expense' ? '-' : tx.type === 'income' ? '+' : ''}
-                          Rp {tx.amount.toLocaleString('id-ID')}
-                        </span>
-                        <span className="text-[9px] uppercase font-semibold text-slate-400">
-                          {tx.category}
-                        </span>
-                      </div>
-
-                      <button
+                        key={tx.id}
                         onClick={() => {
-                          if (confirm('Hapus transaksi ini?')) {
-                            deleteTransaction(tx.id);
-                          }
+                          setSelectedTx(tx);
+                          setIsDetailOpen(true);
                         }}
-                        title="Hapus"
-                        className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-300 hover:text-rose-500 transition-opacity"
+                        className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center justify-between group hover:border-slate-300 dark:hover:border-slate-700 transition-colors cursor-pointer"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div
+                            className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shrink-0 shadow-sm ${
+                              isSplit ? 'bg-emerald-500' : ''
+                            }`}
+                            style={!isSplit ? { backgroundColor: tx.category_color || '#3B82F6' } : {}}
+                          >
+                            {isSplit ? (
+                              <GitFork className="w-5 h-5 text-white" />
+                            ) : (
+                              <CategoryIcon name={tx.category_icon || 'Wallet'} className="w-5 h-5" />
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                              {isSplit ? `${tx.splits!.length} kategori` : (tx.note || tx.category)}
+                            </p>
+                            <p className="text-[10px] text-slate-400 flex items-center gap-1.5 mt-0.5">
+                              <span>
+                                {tx.type === 'transfer'
+                                  ? `${tx.account_name} ➔ ${tx.to_account_name || 'Rekening'}`
+                                  : tx.account_name}
+                              </span>
+                              {tx.time && (
+                                <>
+                                  <span>•</span>
+                                  <span>{tx.time}</span>
+                                </>
+                              )}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <div className="text-right">
+                            <span className={`text-xs font-black block ${
+                              tx.type === 'expense'
+                                ? 'text-rose-500'
+                                : tx.type === 'income'
+                                ? 'text-emerald-500'
+                                : 'text-indigo-500'
+                            }`}>
+                              {tx.type === 'expense' ? '-' : tx.type === 'income' ? '+' : ''}
+                              Rp {tx.amount.toLocaleString('id-ID')}
+                            </span>
+                            <span className="text-[9px] uppercase font-semibold text-slate-400">
+                              {isSplit ? `${tx.splits!.length} kategori` : tx.category}
+                            </span>
+                          </div>
+
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (confirm('Hapus transaksi ini?')) {
+                                deleteTransaction(tx.id);
+                              }
+                            }}
+                            title="Hapus"
+                            className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-300 hover:text-rose-500 transition-opacity"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
-      {/* Manual Modal */}
+      {/* Floating Action Button (+) Matching Screenshot 4 */}
+      <button
+        onClick={() => setModalOpen(true)}
+        title="Catat Transaksi"
+        className="fixed bottom-20 right-6 md:right-auto md:left-1/2 md:translate-x-52 w-14 h-14 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white flex items-center justify-center shadow-xl shadow-emerald-500/30 hover:scale-105 active:scale-95 transition-all z-30"
+      >
+        <Plus className="w-6 h-6" />
+      </button>
+
+      {/* Manual Add Modal */}
       <TransactionModal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
+      />
+
+      {/* Detail Transaksi Modal (Screenshot 3) */}
+      <TransactionDetailModal
+        isOpen={isDetailOpen}
+        transaction={selectedTx}
+        onClose={() => {
+          setIsDetailOpen(false);
+          setSelectedTx(null);
+        }}
       />
 
     </div>

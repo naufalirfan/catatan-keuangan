@@ -1105,8 +1105,9 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         id: user.id,
         email: user.email,
         ai_config: newConfig,
-        updated_at: new Date().toISOString(),
-      }, { onConflict: 'id' }).then(() => {}, console.warn);
+      }, { onConflict: 'id' }).then(({ error }) => {
+        if (error) console.warn('[updateAiConfig] Supabase upsert error:', error.message);
+      });
     }
     // Simpan ke localStorage sebagai cache (bukan sumber utama)
     if (typeof window !== 'undefined') {

@@ -47,6 +47,19 @@ export interface Budget {
   month: string; // YYYY-MM
 }
 
+export interface SavingsGoal {
+  id: string;
+  user_id?: string;
+  name: string;
+  target_amount: number;
+  current_amount: number;
+  target_date?: string; // YYYY-MM-DD
+  color: string;
+  icon: string;
+  note?: string;
+  created_at: string;
+}
+
 export interface AiConfig {
   provider: 'gemini' | 'custom' | 'auto';
   geminiApiKey: string;

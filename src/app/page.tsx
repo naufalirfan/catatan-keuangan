@@ -23,6 +23,9 @@ import {
   Zap
 } from 'lucide-react';
 import SuperAdminMemberManager from '@/components/SuperAdminMemberManager';
+import SavingsGoalModal from '@/components/SavingsGoalModal';
+import { SavingsGoal } from '@/types/finance';
+import { Coins, Target } from 'lucide-react';
 
 export default function DashboardPage() {
   const { 
@@ -38,12 +41,25 @@ export default function DashboardPage() {
     accounts, 
     transactions, 
     categoryExpensesMonth,
-    deleteTransaction
+    deleteTransaction,
+    budgets,
+    savingsGoals,
   } = useFinance();
 
   const [isBalanceHidden, setIsBalanceHidden] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalType, setModalType] = useState<TransactionType>('expense');
+
+  // Savings Goal Quick Modal
+  const [isSavingsModalOpen, setIsSavingsModalOpen] = useState(false);
+  const [savingsModalMode, setSavingsModalMode] = useState<'create_edit' | 'deposit'>('deposit');
+  const [selectedGoalForModal, setSelectedGoalForModal] = useState<SavingsGoal | null>(null);
+
+  const openDepositModal = (goal: SavingsGoal) => {
+    setSelectedGoalForModal(goal);
+    setSavingsModalMode('deposit');
+    setIsSavingsModalOpen(true);
+  };
 
   const openManualModal = (type: TransactionType = 'expense') => {
     setModalType(type);
@@ -323,6 +339,59 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* Target Tabungan Preview Widget */}
+      {savingsGoals.length > 0 && (
+        <div className="p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <Coins className="w-4 h-4 text-cyan-500" />
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+                Target Tabungan
+              </h2>
+            </div>
+            <Link href="/analitik" className="text-xs font-semibold text-cyan-600 dark:text-cyan-400 flex items-center">
+              Lihat Semua <ChevronRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+          <div className="space-y-3">
+            {savingsGoals.slice(0, 2).map((goal) => {
+              const pct = goal.target_amount > 0 ? Math.round((goal.current_amount / goal.target_amount) * 100) : 0;
+              return (
+                <div key={goal.id} className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800/60 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                      {goal.name}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => openDepositModal(goal)}
+                      className="px-2.5 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] font-bold transition-all shadow-sm flex items-center gap-1"
+                    >
+                      + Nabung
+                    </button>
+                  </div>
+                  <div className="flex justify-between text-[11px]">
+                    <span className="text-slate-500 font-medium">
+                      Rp {goal.current_amount.toLocaleString('id-ID')} / Rp {goal.target_amount.toLocaleString('id-ID')}
+                    </span>
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                      {pct}%
+                    </span>
+                  </div>
+                  <div className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{ width: `${Math.min(100, pct)}%`, backgroundColor: goal.color || '#10b981' }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Recent Transactions List */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
@@ -410,6 +479,14 @@ export default function DashboardPage() {
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         initialType={modalType}
+      />
+
+      {/* Savings Goal Deposit Modal */}
+      <SavingsGoalModal
+        isOpen={isSavingsModalOpen}
+        onClose={() => setIsSavingsModalOpen(false)}
+        goalToEdit={selectedGoalForModal}
+        mode={savingsModalMode}
       />
 
     </div>

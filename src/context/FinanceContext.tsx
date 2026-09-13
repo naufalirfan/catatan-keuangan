@@ -6,6 +6,7 @@ import {
   Account, 
   Category, 
   Budget, 
+  SavingsGoal,
   AiConfig, 
   UserProfile, 
   TransactionType,
@@ -40,17 +41,20 @@ interface FinanceContextType {
   showPlanModal: boolean;
   setShowPlanModal: (show: boolean) => void;
   setUserPlan: (plan: UserPlan) => void;
+
+  // Auth actions
   signInWithGoogle: () => Promise<void>;
   loginWithGoogleCredential: (token: string) => boolean;
   loginAsDemo: () => void;
   loginAsAdmin: () => void;
   logout: () => void;
 
-  // Data state (Isolated per user)
+  // Data state
   transactions: Transaction[];
   accounts: Account[];
   categories: Category[];
   budgets: Budget[];
+  savingsGoals: SavingsGoal[];
   aiConfig: AiConfig;
 
   // Actions
@@ -65,6 +69,11 @@ interface FinanceContextType {
   deleteCategory: (id: string) => void;
   resetCategoriesToDefault: () => void;
   updateBudget: (category: string, limit: number) => void;
+  deleteBudget: (category: string) => void;
+  addSavingsGoal: (goal: Omit<SavingsGoal, 'id' | 'created_at'>) => void;
+  updateSavingsGoal: (id: string, updates: Partial<SavingsGoal>) => void;
+  deleteSavingsGoal: (id: string) => void;
+  depositToSavingsGoal: (id: string, amount: number, accountId?: string) => void;
   updateAiConfig: (config: Partial<AiConfig>) => void;
 
   // Filters
@@ -111,11 +120,47 @@ const STORAGE_KEYS = {
   ACCOUNTS: (uid: string) => `catatankeuangan_acc_${uid}`,
   CATEGORIES: (uid: string) => `catatankeuangan_cat_${uid}`,
   BUDGETS: (uid: string) => `catatankeuangan_budgets_${uid}`,
+  SAVINGS_GOALS: (uid: string) => `catatankeuangan_savings_goals_${uid}`,
   AI_CONFIG: 'catatankeuangan_ai_config',
   MEMBERS: 'catatankeuangan_members_registry',
   PRO_POPUP_SEEN: (uid: string) => `catatankeuangan_pro_popup_seen_${uid}`,
 };
 
+const DEFAULT_SAVINGS_GOALS: SavingsGoal[] = [
+  {
+    id: 'sg-1',
+    name: 'Dana Darurat 6 Bulan',
+    target_amount: 15000000,
+    current_amount: 6000000,
+    target_date: '2026-12-31',
+    color: '#10b981',
+    icon: 'Shield',
+    note: 'Cadangan keamanan keluarga untuk keperluan mendesak',
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 'sg-2',
+    name: 'Beli Gadget / Laptop Baru',
+    target_amount: 12000000,
+    current_amount: 4500000,
+    target_date: '2026-11-30',
+    color: '#06b6d4',
+    icon: 'Laptop',
+    note: 'Upgrade perangkat kerja & produktivitas',
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 'sg-3',
+    name: 'Liburan Akhir Tahun',
+    target_amount: 5000000,
+    current_amount: 2250000,
+    target_date: '2026-12-25',
+    color: '#f59e0b',
+    icon: 'Plane',
+    note: 'Refreshing liburan bersama keluarga',
+    created_at: new Date().toISOString(),
+  },
+];
 
 const DEFAULT_AI_CONFIG: AiConfig = {
   provider: 'custom',
@@ -151,6 +196,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const [accounts, setAccounts] = useState<Account[]>(DEFAULT_ACCOUNTS);
   const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES);
   const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [savingsGoals, setSavingsGoals] = useState<SavingsGoal[]>([]);
   const [aiConfig, setAiConfig] = useState<AiConfig>(DEFAULT_AI_CONFIG);
 
   // Filters
@@ -266,6 +312,22 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       }
     } else {
       setBudgets([]);
+    }
+
+    // Load Savings Goals
+    const savedGoals = localStorage.getItem(STORAGE_KEYS.SAVINGS_GOALS(uid));
+    if (savedGoals) {
+      try {
+        const parsed = JSON.parse(savedGoals);
+        setSavingsGoals(Array.isArray(parsed) && parsed.length > 0 ? parsed : DEFAULT_SAVINGS_GOALS);
+      } catch {
+        setSavingsGoals(DEFAULT_SAVINGS_GOALS);
+      }
+    } else {
+      setSavingsGoals(DEFAULT_SAVINGS_GOALS);
+      try {
+        localStorage.setItem(STORAGE_KEYS.SAVINGS_GOALS(uid), JSON.stringify(DEFAULT_SAVINGS_GOALS));
+      } catch {}
     }
   }, []);
 
@@ -714,8 +776,76 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       newBudgets = [...budgets, { id: `bgt-${Date.now()}`, category, limit_amount: limit, month: currentMonth }];
     }
     setBudgets(newBudgets);
-    if (user && typeof window !== 'undefined') {
-      localStorage.setItem(STORAGE_KEYS.BUDGETS(user.id), JSON.stringify(newBudgets));
+    const uid = user?.id || 'demo-user';
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(STORAGE_KEYS.BUDGETS(uid), JSON.stringify(newBudgets));
+      } catch {}
+    }
+  };
+
+  const deleteBudget = (category: string) => {
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    const newBudgets = budgets.filter((b) => !(b.category === category && b.month === currentMonth));
+    setBudgets(newBudgets);
+    const uid = user?.id || 'demo-user';
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(STORAGE_KEYS.BUDGETS(uid), JSON.stringify(newBudgets));
+      } catch {}
+    }
+  };
+
+  // Savings Goals Actions
+  const persistSavingsGoals = (newGoals: SavingsGoal[]) => {
+    setSavingsGoals(newGoals);
+    const uid = user?.id || 'demo-user';
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(STORAGE_KEYS.SAVINGS_GOALS(uid), JSON.stringify(newGoals));
+      } catch {}
+    }
+  };
+
+  const addSavingsGoal = (goalData: Omit<SavingsGoal, 'id' | 'created_at'>) => {
+    const newGoal: SavingsGoal = {
+      ...goalData,
+      id: `sg-${Date.now()}`,
+      created_at: new Date().toISOString(),
+    };
+    persistSavingsGoals([...savingsGoals, newGoal]);
+  };
+
+  const updateSavingsGoal = (id: string, updates: Partial<SavingsGoal>) => {
+    const updated = savingsGoals.map((g) => (g.id === id ? { ...g, ...updates } : g));
+    persistSavingsGoals(updated);
+  };
+
+  const deleteSavingsGoal = (id: string) => {
+    const filtered = savingsGoals.filter((g) => g.id !== id);
+    persistSavingsGoals(filtered);
+  };
+
+  const depositToSavingsGoal = (id: string, amount: number, accountId?: string) => {
+    const target = savingsGoals.find((g) => g.id === id);
+    if (!target) return;
+    const updatedAmount = target.current_amount + amount;
+    updateSavingsGoal(id, { current_amount: updatedAmount });
+
+    // Jika akun pembayaran dipilih, potong saldo akun tersebut melalui transaksi
+    if (accountId) {
+      const acc = accounts.find((a) => a.id === accountId);
+      if (acc) {
+        addTransaction({
+          type: 'expense',
+          amount,
+          category: 'Investasi & Tabungan',
+          account_id: accountId,
+          account_name: acc.name,
+          date: new Date().toISOString().split('T')[0],
+          note: `Nabung Target: ${target.name}`,
+        });
+      }
     }
   };
 
@@ -1065,6 +1195,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         accounts,
         categories,
         budgets,
+        savingsGoals,
         aiConfig,
         addTransaction,
         updateTransaction,
@@ -1077,6 +1208,11 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         deleteCategory,
         resetCategoriesToDefault,
         updateBudget,
+        deleteBudget,
+        addSavingsGoal,
+        updateSavingsGoal,
+        deleteSavingsGoal,
+        depositToSavingsGoal,
         updateAiConfig,
         filterPeriod,
         setFilterPeriod,

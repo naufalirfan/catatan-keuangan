@@ -473,7 +473,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         } catch {}
       }
     }
-  }, []);
+  }, [user]);
 
   // Load Members + Supabase auth listener
   useEffect(() => {

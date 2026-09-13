@@ -1,14 +1,16 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useFinance } from '@/context/FinanceContext';
+import { Capacitor } from '@capacitor/core';
 import { 
   Wallet, 
   Sparkles, 
   ShieldCheck, 
   Bot, 
   Zap, 
-  ArrowRight
+  ArrowRight,
+  UserCheck
 } from 'lucide-react';
 
 interface AuthGateProps {
@@ -21,8 +23,16 @@ export default function AuthGate({ children }: AuthGateProps) {
     isLoading, 
     googleClientId, 
     signInWithGoogle,
-    loginWithGoogleCredential
+    loginWithGoogleCredential,
+    loginAsDemo
   } = useFinance();
+
+  const [isNative, setIsNative] = useState(false);
+
+  useEffect(() => {
+    const native = Capacitor.isNativePlatform() || (typeof navigator !== 'undefined' && navigator.userAgent.includes('KashFolioApp'));
+    setIsNative(native);
+  }, []);
 
 
   // Initialize Google Identity Services if client id is present
@@ -166,13 +176,9 @@ export default function AuthGate({ children }: AuthGateProps) {
             Masuk dengan Akun Anda
           </h2>
 
-          {/* Primary Google Login Section (Sama persis seperti di web logbook) */}
+          {/* Primary Google Login Section */}
           <div className="space-y-3 py-1">
-            {googleClientId ? (
-              <div className="w-full flex justify-center py-1 min-h-[44px]">
-                <div id="google-real-button-container" className="w-full flex justify-center" />
-              </div>
-            ) : (
+            {isNative || !googleClientId ? (
               <button
                 type="button"
                 onClick={signInWithGoogle}
@@ -198,7 +204,23 @@ export default function AuthGate({ children }: AuthGateProps) {
                 </svg>
                 <span>Masuk dengan Akun Google</span>
               </button>
+            ) : (
+              <div className="w-full flex justify-center py-1 min-h-[44px]">
+                <div id="google-real-button-container" className="w-full flex justify-center" />
+              </div>
             )}
+
+            {/* Separator / Guest Option */}
+            <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={loginAsDemo}
+                className="w-full py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-800/80 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-300 font-semibold text-xs transition-all flex items-center justify-center gap-2 active:scale-98"
+              >
+                <UserCheck className="w-3.5 h-3.5 text-emerald-500" />
+                <span>Masuk sebagai Tamu (Mode Demo)</span>
+              </button>
+            </div>
           </div>
 
           <p className="text-[11px] text-slate-400 pt-1">

@@ -26,6 +26,9 @@ import { getUserSession, saveUserSession, clearUserSession } from '@/lib/cookies
 import * as XLSX from 'xlsx';
 import { NAUFAL_BACKUP_TRANSACTIONS } from '@/data/naufalDefaultTransactions';
 import { parseCkbakArrayBuffer } from '@/lib/ckbakParser';
+import { Capacitor } from '@capacitor/core';
+import { Browser } from '@capacitor/browser';
+import { App } from '@capacitor/app';
 
 const SUPERADMIN_EMAIL = 'naufalfaster@gmail.com';
 
@@ -577,8 +580,48 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         }
       });
 
+      // Setup Deep Link listener for Capacitor APK
+      let appUrlListener: { remove: () => void } | null = null;
+      if (typeof window !== 'undefined' && (Capacitor.isNativePlatform() || navigator.userAgent.includes('KashFolioApp'))) {
+        App.addListener('appUrlOpen', async (data) => {
+          try {
+            await Browser.close();
+          } catch {}
+
+          if (data.url && isSupabaseConfigured && supabase) {
+            try {
+              const urlObj = new URL(data.url);
+              const code = urlObj.searchParams.get('code');
+              if (code) {
+                await supabase.auth.exchangeCodeForSession(code);
+                return;
+              }
+              const hash = urlObj.hash;
+              if (hash && hash.includes('access_token')) {
+                const params = new URLSearchParams(hash.replace('#', ''));
+                const accessToken = params.get('access_token');
+                const refreshToken = params.get('refresh_token');
+                if (accessToken && refreshToken) {
+                  await supabase.auth.setSession({
+                    access_token: accessToken,
+                    refresh_token: refreshToken,
+                  });
+                }
+              }
+            } catch (e) {
+              console.error('Failed to parse deep link url:', e);
+            }
+          }
+        }).then((listener) => {
+          appUrlListener = listener;
+        });
+      }
+
       return () => {
         authListener.subscription.unsubscribe();
+        if (appUrlListener) {
+          appUrlListener.remove();
+        }
       };
     } else {
       setIsLoading(false);
@@ -588,13 +631,24 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   // Real Google Sign In via Supabase OAuth
   const signInWithGoogle = useCallback(async () => {
     if (isSupabaseConfigured && supabase) {
-      const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
-      await supabase.auth.signInWithOAuth({
+      const isNative = typeof window !== 'undefined' && (Capacitor.isNativePlatform() || navigator.userAgent.includes('KashFolioApp'));
+      const redirectTo = 'https://catatan-keuangan-nfl.vercel.app/auth/callback';
+
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${origin}/auth/callback`,
+          redirectTo,
+          skipBrowserRedirect: isNative,
         },
       });
+
+      if (error) {
+        console.error('Supabase OAuth error:', error);
+      }
+
+      if (isNative && data?.url) {
+        await Browser.open({ url: data.url, windowName: '_self' });
+      }
     } else {
       if (typeof window !== 'undefined') {
         const googleObj = (window as unknown as { google?: { accounts: { id: { prompt: () => void } } } }).google;

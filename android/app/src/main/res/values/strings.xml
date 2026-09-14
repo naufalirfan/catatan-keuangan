@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">KashFolio</string>
-    <string name="title_activity_main">KashFolio</string>
+    <string name="app_name">KashFolio: Catatan Keuangan</string>
+    <string name="title_activity_main">KashFolio: Catatan Keuangan</string>
     <string name="package_name">com.naufal.catatankeuangan</string>
     <string name="custom_url_scheme">com.naufal.catatankeuangan</string>
     <string name="server_client_id">421276748294-3stmc79dgpq72uqqr3glsupqtghrqg4m.apps.googleusercontent.com</string>

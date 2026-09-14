@@ -2,7 +2,7 @@ import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.naufal.catatankeuangan',
-  appName: 'KashFolio',
+  appName: 'KashFolio: Catatan Keuangan',
   webDir: 'out',
   server: {
     androidScheme: 'https',

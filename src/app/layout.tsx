@@ -11,10 +11,14 @@ export const metadata: Metadata = {
   title: 'KashFolio: Money & Expense Tracker • by Naufal',
   description: 'Aplikasi pencatatan keuangan modern mobile-first dengan AI cerdas, multi-rekening tanpa batas, anggaran per kategori, target tabungan, dan catatan hutang.',
   icons: {
-    icon: '/flying-money.png',
+    icon: [
+      { url: '/favicon.ico' },
+      { url: '/flying-money.png', type: 'image/png' }
+    ],
     shortcut: '/flying-money.png',
-    apple: '/flying-money.png',
+    apple: '/apple-touch-icon.png',
   },
+  manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',

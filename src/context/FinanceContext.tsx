@@ -628,56 +628,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     }
   }, [loadScopedData]);
 
-  // Real Google Sign In via Supabase OAuth
-  const signInWithGoogle = useCallback(async () => {
-    if (isSupabaseConfigured && supabase) {
-      const isNative = typeof window !== 'undefined' && (Capacitor.isNativePlatform() || navigator.userAgent.includes('KashFolioApp'));
-      const redirectTo = 'https://catatan-keuangan-nfl.vercel.app/auth/callback';
-
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo,
-          skipBrowserRedirect: isNative,
-        },
-      });
-
-      if (error) {
-        console.error('Supabase OAuth error:', error);
-      }
-
-      if (isNative && data?.url) {
-        await Browser.open({ url: data.url, windowName: '_self' });
-      }
-    } else {
-      if (typeof window !== 'undefined') {
-        const googleObj = (window as unknown as { google?: { accounts: { id: { prompt: () => void } } } }).google;
-        if (googleObj?.accounts?.id) {
-          googleObj.accounts.id.prompt();
-        }
-      }
-    }
-  }, []);
-
-  // Set User Plan (Free vs Pro)
-  const setUserPlan = useCallback((plan: UserPlan) => {
-    if (!user) return;
-    const updated = { ...user, plan };
-    setUser(updated);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(updated));
-      localStorage.setItem(STORAGE_KEYS.PLAN(user.id), plan);
-    }
-  }, [user]);
-
-  // Save changes to LocalStorage helper
-  const persistTransactions = (newTx: Transaction[]) => {
-    setTransactions(newTx);
-    if (user && typeof window !== 'undefined') {
-      localStorage.setItem(STORAGE_KEYS.TRANSACTIONS(user.id), JSON.stringify(newTx));
-    }
-  };
-
   // Popup trigger: PRO hanya muncul 1x setelah login, FREE berkala
   const triggerPostLoginPopup = useCallback((loggedUser: UserProfile) => {
     if (typeof window === 'undefined') return;
@@ -691,26 +641,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       setShowPlanModal(true);
     }
   }, []);
-
-  // Popup berkala tiap 5 menit khusus akun FREE
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (!user) return;
-    if (userPlan === 'pro' || isSuperAdmin) return;
-
-    const interval = setInterval(() => {
-      setShowPlanModal(true);
-    }, 5 * 60 * 1000);
-
-    return () => clearInterval(interval);
-  }, [user, userPlan, isSuperAdmin]);
-
-  const persistAccounts = (newAcc: Account[]) => {
-    setAccounts(newAcc);
-    if (user && typeof window !== 'undefined') {
-      localStorage.setItem(STORAGE_KEYS.ACCOUNTS(user.id), JSON.stringify(newAcc));
-    }
-  };
 
   // Google Login handler
   const loginWithGoogleCredential = useCallback((credentialToken: string): boolean => {
@@ -747,6 +677,102 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     triggerPostLoginPopup(loggedUser);
     return true;
   }, [loadScopedData, triggerPostLoginPopup]);
+
+  // Real Google Sign In via Native Google Auth on Android or Supabase OAuth / GSI
+  const signInWithGoogle = useCallback(async () => {
+    const isNative = typeof window !== 'undefined' && (Capacitor.isNativePlatform() || navigator.userAgent.includes('KashFolioApp'));
+
+    // 1. Try Native Google Sign-In dialog on Android
+    if (isNative) {
+      try {
+        const { GoogleAuth } = await import('@shardev/capacitor-google-auth');
+        await GoogleAuth.initialize({
+          clientId: '421276748294-3stmc79dgpq72uqqr3glsupqtghrqg4m.apps.googleusercontent.com',
+          serverClientId: '421276748294-3stmc79dgpq72uqqr3glsupqtghrqg4m.apps.googleusercontent.com',
+          scopes: ['profile', 'email'],
+        });
+        const result = await GoogleAuth.login();
+        if (result?.idToken) {
+          const success = loginWithGoogleCredential(result.idToken);
+          if (success) return;
+        }
+      } catch (err: unknown) {
+        console.warn('Native GoogleAuth error (will fallback to browser OAuth):', err);
+        // If user cancelled selection dialog, don't fallback to browser
+        const errMsg = String((err as { message?: string })?.message || err || '');
+        if (errMsg.toLowerCase().includes('cancel') || errMsg.includes('12501')) {
+          return;
+        }
+      }
+    }
+
+    // 2. Web or Native fallback: Supabase OAuth
+    if (isSupabaseConfigured && supabase) {
+      const redirectTo = 'https://catatan-keuangan-nfl.vercel.app/auth/callback';
+
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo,
+          skipBrowserRedirect: isNative,
+        },
+      });
+
+      if (error) {
+        console.error('Supabase OAuth error:', error);
+      }
+
+      if (isNative && data?.url) {
+        await Browser.open({ url: data.url, windowName: '_self' });
+      }
+    } else {
+      if (typeof window !== 'undefined') {
+        const googleObj = (window as unknown as { google?: { accounts: { id: { prompt: () => void } } } }).google;
+        if (googleObj?.accounts?.id) {
+          googleObj.accounts.id.prompt();
+        }
+      }
+    }
+  }, [loginWithGoogleCredential]);
+
+  // Set User Plan (Free vs Pro)
+  const setUserPlan = useCallback((plan: UserPlan) => {
+    if (!user) return;
+    const updated = { ...user, plan };
+    setUser(updated);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(updated));
+      localStorage.setItem(STORAGE_KEYS.PLAN(user.id), plan);
+    }
+  }, [user]);
+
+  // Save changes to LocalStorage helper
+  const persistTransactions = (newTx: Transaction[]) => {
+    setTransactions(newTx);
+    if (user && typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_KEYS.TRANSACTIONS(user.id), JSON.stringify(newTx));
+    }
+  };
+
+  // Popup berkala tiap 5 menit khusus akun FREE
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!user) return;
+    if (userPlan === 'pro' || isSuperAdmin) return;
+
+    const interval = setInterval(() => {
+      setShowPlanModal(true);
+    }, 5 * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, [user, userPlan, isSuperAdmin]);
+
+  const persistAccounts = (newAcc: Account[]) => {
+    setAccounts(newAcc);
+    if (user && typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_KEYS.ACCOUNTS(user.id), JSON.stringify(newAcc));
+    }
+  };
 
 
   const loginAsDemo = useCallback(() => {

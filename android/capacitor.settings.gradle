@@ -7,3 +7,6 @@ project(':capacitor-app').projectDir = new File('../node_modules/@capacitor/app/
 
 include ':capacitor-browser'
 project(':capacitor-browser').projectDir = new File('../node_modules/@capacitor/browser/android')
+
+include ':shardev-capacitor-google-auth'
+project(':shardev-capacitor-google-auth').projectDir = new File('../node_modules/@shardev/capacitor-google-auth/android')

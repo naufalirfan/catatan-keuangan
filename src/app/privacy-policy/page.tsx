@@ -1,9 +1,10 @@
 import React from 'react';
 import Link from 'next/link';
+import type { Metadata } from 'next';
 
-export const metadata = {
-  title: 'Kebijakan Privasi - KashFolio',
-  description: 'Kebijakan Privasi aplikasi KashFolio: Catatan Keuangan oleh Naufal.',
+export const metadata: Metadata = {
+  title: 'Kebijakan Privasi - KashFolio: Catatan Keuangan',
+  description: 'Kebijakan Privasi aplikasi KashFolio: Catatan Keuangan oleh Naufal Irfansyah Saputra.',
 };
 
 export default function PrivacyPolicyPage() {
@@ -17,53 +18,80 @@ export default function PrivacyPolicyPage() {
           <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
             Kebijakan Privasi (Privacy Policy)
           </h1>
-          <p className="text-sm text-slate-400 mt-2">
-            Aplikasi: <strong>KashFolio: Catatan Keuangan</strong> | Developer: <strong>Naufal</strong>
-          </p>
-          <p className="text-xs text-slate-500">Terakhir diperbarui: 14 September 2026</p>
+          <div className="mt-2 text-sm text-slate-400 space-y-1">
+            <p>Aplikasi: <strong>KashFolio: Catatan Keuangan</strong></p>
+            <p>ID Paket (Package Name): <code className="text-emerald-400 bg-slate-800 px-1.5 py-0.5 rounded text-xs">com.naufal.catatankeuangan</code></p>
+            <p>Pengembang (Developer): <strong>Naufal Irfansyah Saputra</strong></p>
+            <p className="text-xs text-slate-500 pt-1">Terakhir diperbarui: 10 Oktober 2026</p>
+          </div>
         </div>
 
         <section className="space-y-3">
           <h2 className="text-lg font-semibold text-emerald-400">1. Pendahuluan</h2>
           <p className="text-sm text-slate-300 leading-relaxed">
-            Selamat datang di <strong>KashFolio: Catatan Keuangan</strong> (&quot;kami&quot;, &quot;aplikasi&quot;). Kami sangat menghargai privasi data finansial pribadi Anda. Kebijakan Privasi ini menjelaskan bagaimana kami mengumpulkan, menggunakan, dan melindungi informasi Anda saat menggunakan aplikasi mobile maupun web kami.
+            Selamat datang di <strong>KashFolio: Catatan Keuangan</strong> (&quot;kami&quot;, &quot;aplikasi&quot;). Kebijakan Privasi ini menjelaskan bagaimana kami mengumpulkan, menggunakan, menyimpan, dan melindungi data pribadi Anda saat menggunakan aplikasi mobile Android maupun platform web kami. Kami berkomitmen penuh untuk menjaga privasi dan keamanan data finansial Anda.
           </p>
         </section>
 
         <section className="space-y-3">
           <h2 className="text-lg font-semibold text-emerald-400">2. Data yang Kami Kumpulkan</h2>
-          <ul className="list-disc list-inside text-sm text-slate-300 space-y-1.5 pl-2">
-            <li><strong>Informasi Akun:</strong> Saat Anda login menggunakan Google Sign-In (OAuth), kami menerima nama, alamat email, dan foto profil Anda semata-mata untuk keperluan autentikasi akun.</li>
-            <li><strong>Data Keuangan Pengguna:</strong> Data transaksi keuangan (nominal, kategori, catatan pemasukan/pengeluaran, catatan hutang/piutang) yang Anda masukkan sendiri ke dalam aplikasi.</li>
-            <li><strong>Mode Tamu (Guest Mode):</strong> Jika Anda menggunakan Mode Tamu tanpa login, seluruh data keuangan hanya disimpan secara lokal di penyimpanan perangkat Anda.</li>
+          <p className="text-sm text-slate-300 leading-relaxed">
+            Kami hanya mengumpulkan data yang benar-benar dibutuhkan untuk menyediakan fungsionalitas pencatatan keuangan pribadi:
+          </p>
+          <ul className="list-disc list-inside text-sm text-slate-300 space-y-2 pl-2">
+            <li>
+              <strong>Informasi Akun (Google Sign-In / OAuth):</strong> Saat Anda masuk menggunakan Google Sign-In, kami menerima informasi dasar berupa nama, alamat email, dan foto profil. Data ini digunakan semata-mata untuk mengautentikasi identitas akun dan sinkronisasi data antar-perangkat Anda.
+            </li>
+            <li>
+              <strong>Data Transaksi Keuangan:</strong> Data transaksi (nominal uang, kategori pengeluaran/pemasukan, tanggal, catatan deskripsi, serta catatan hutang/piutang) yang Anda inputkan secara manual atau diproses secara lokal melalui bantuan AI.
+            </li>
+            <li>
+              <strong>Mode Tamu (Guest Mode):</strong> Apabila Anda memilih masuk sebagai tamu (Mode Demo), seluruh data disimpan 100% secara lokal di perangkat Anda tanpa diunggah ke server cloud kami.
+            </li>
           </ul>
         </section>
 
         <section className="space-y-3">
           <h2 className="text-lg font-semibold text-emerald-400">3. Penggunaan dan Perlindungan Data</h2>
           <p className="text-sm text-slate-300 leading-relaxed">
-            Data Anda digunakan semata-mata untuk menyediakan fitur pencatatan dan analitik keuangan pribadi Anda.
+            Data Anda digunakan hanya untuk fungsionalitas internal aplikasi KashFolio:
           </p>
-          <ul className="list-disc list-inside text-sm text-slate-300 space-y-1.5 pl-2">
-            <li>Kami <strong>TIDAK PERNAH</strong> menjual, menyewakan, atau membagikan data keuangan Anda kepada pihak ketiga atau pengiklan.</li>
-            <li>Aplikasi ini <strong>TIDAK</strong> mengandung iklan komersial dari pihak ketiga.</li>
-            <li>Semua komunikasi data antara aplikasi dan basis data diamankan dengan enkripsi standar industri saat transit (HTTPS/SSL).</li>
+          <ul className="list-disc list-inside text-sm text-slate-300 space-y-2 pl-2">
+            <li>Kami <strong>TIDAK PERNAH</strong> menjual, menyewakan, mentransfer, atau membagikan data pribadi maupun finansial Anda kepada pihak ketiga atau jaringan periklanan.</li>
+            <li>Aplikasi ini <strong>BEBAS DARI IKLAN</strong> komersial pihak ketiga.</li>
+            <li>Semua komunikasi data antara aplikasi dan basis data (Supabase) dilindungi menggunakan enkripsi standar industri HTTPS / TLS (SSL).</li>
+            <li>Data setiap pengguna terisolasi secara ketat menggunakan Row-Level Security (RLS) sehingga hanya Anda yang dapat mengakses data Anda.</li>
           </ul>
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-lg font-semibold text-emerald-400">4. Hak Pengguna & Penghapusan Data</h2>
+          <h2 className="text-lg font-semibold text-emerald-400">4. Hak Pengguna & Penghapusan Data (Data Deletion)</h2>
           <p className="text-sm text-slate-300 leading-relaxed">
-            Anda memiliki kontrol penuh terhadap data Anda. Anda dapat menghapus data transaksi kapan saja dari menu aplikasi, atau mengajukan permohonan penghapusan akun permanen melalui halaman <Link href="/delete-data" className="text-emerald-400 underline">Penghapusan Data</Link> atau dengan menghubungi email <strong>naufalfaster@gmail.com</strong>.
+            Anda memiliki kontrol penuh atas seluruh data pribadi Anda:
+          </p>
+          <ul className="list-disc list-inside text-sm text-slate-300 space-y-2 pl-2">
+            <li>Anda dapat menghapus atau mereset transaksi kapan saja langsung dari menu <strong>Pengaturan &gt; Hapus / Reset Data</strong> di dalam aplikasi.</li>
+            <li>Anda dapat mengajukan permohonan penghapusan akun dan seluruh data terkait secara permanen melalui halaman panduan kami di <Link href="/delete-data" className="text-emerald-400 underline font-medium">Halaman Penghapusan Data</Link> atau dengan mengirimkan email ke <strong className="text-emerald-400">naufalfaster@gmail.com</strong>. Data Anda akan dihapus secara menyeluruh dari server dalam waktu maksimal 7 hari kerja.</li>
+          </ul>
+        </section>
+
+        <section className="space-y-3">
+          <h2 className="text-lg font-semibold text-emerald-400">5. Privasi Anak-Anak (Children&apos;s Privacy)</h2>
+          <p className="text-sm text-slate-300 leading-relaxed">
+            Aplikasi ini tidak ditujukan untuk anak-anak di bawah usia 13 tahun, dan kami tidak dengan sengaja mengumpulkan data identitas pribadi dari anak-anak di bawah umur.
           </p>
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-lg font-semibold text-emerald-400">5. Kontak Pengembang</h2>
+          <h2 className="text-lg font-semibold text-emerald-400">6. Kontak Pengembang (Developer Contact)</h2>
           <p className="text-sm text-slate-300 leading-relaxed">
-            Jika Anda memiliki pertanyaan tentang Kebijakan Privasi ini, Anda dapat menghubungi kami melalui:
+            Jika Anda memiliki pertanyaan, keluhan, atau saran terkait kebijakan privasi ini atau pengelolaan data di KashFolio, Anda dapat menghubungi kami secara langsung melalui:
           </p>
-          <p className="text-sm font-mono text-emerald-400">Email: naufalfaster@gmail.com</p>
+          <div className="bg-slate-800/80 p-4 rounded-xl border border-slate-700/80 space-y-1 text-sm">
+            <p><strong>Pengembang:</strong> Naufal Irfansyah Saputra</p>
+            <p><strong>Email:</strong> <a href="mailto:naufalfaster@gmail.com" className="text-emerald-400 font-mono hover:underline">naufalfaster@gmail.com</a></p>
+            <p><strong>Aplikasi:</strong> KashFolio: Catatan Keuangan (com.naufal.catatankeuangan)</p>
+          </div>
         </section>
       </div>
     </div>

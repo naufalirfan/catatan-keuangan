@@ -2,13 +2,10 @@ import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
 import './globals.css';
 import { FinanceProvider } from '@/context/FinanceContext';
-import Navbar from '@/components/Navbar';
-import BottomNav from '@/components/BottomNav';
 import AuthGate from '@/components/AuthGate';
-import PlanModal from '@/components/PlanModal';
 
 export const metadata: Metadata = {
-  title: 'KashFolio: Money & Expense Tracker • by Naufal',
+  title: 'KashFolio: Money & Expense Tracker   by Naufal',
   description: 'Aplikasi pencatatan keuangan modern mobile-first dengan AI cerdas, multi-rekening tanpa batas, anggaran per kategori, target tabungan, dan catatan hutang.',
   icons: {
     icon: [
@@ -65,12 +62,7 @@ export default function RootLayout({
         <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" />
         <FinanceProvider>
           <AuthGate>
-            <Navbar />
-            <main className="flex-1 pb-24">
-              {children}
-            </main>
-            <BottomNav />
-            <PlanModal />
+            {children}
           </AuthGate>
         </FinanceProvider>
       </body>

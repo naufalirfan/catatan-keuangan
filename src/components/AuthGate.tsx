@@ -1,15 +1,16 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { useFinance } from '@/context/FinanceContext';
 import { Capacitor } from '@capacitor/core';
+import Navbar from '@/components/Navbar';
+import BottomNav from '@/components/BottomNav';
+import PlanModal from '@/components/PlanModal';
 import { 
-  Wallet, 
-  Sparkles, 
   ShieldCheck, 
   Bot, 
   Zap, 
-  ArrowRight,
   UserCheck
 } from 'lucide-react';
 
@@ -18,6 +19,7 @@ interface AuthGateProps {
 }
 
 export default function AuthGate({ children }: AuthGateProps) {
+  const pathname = usePathname();
   const { 
     isAuthenticated, 
     isLoading, 
@@ -33,7 +35,6 @@ export default function AuthGate({ children }: AuthGateProps) {
     const native = Capacitor.isNativePlatform() || (typeof navigator !== 'undefined' && navigator.userAgent.includes('KashFolioApp'));
     setIsNative(native);
   }, []);
-
 
   // Initialize Google Identity Services if client id is present
   useEffect(() => {
@@ -82,6 +83,18 @@ export default function AuthGate({ children }: AuthGateProps) {
     }
   }, [googleClientId, loginWithGoogleCredential]);
 
+  // Public routes (accessible to everyone without login, Google crawler, etc.)
+  const isPublicRoute = 
+    pathname === '/privacy-policy' || 
+    pathname?.startsWith('/privacy-policy') || 
+    pathname === '/delete-data' || 
+    pathname?.startsWith('/delete-data') ||
+    pathname === '/auth/callback' ||
+    pathname?.startsWith('/auth/callback');
+
+  if (isPublicRoute) {
+    return <main className="flex-1 min-h-screen">{children}</main>;
+  }
 
   if (isLoading) {
     return (
@@ -98,9 +111,18 @@ export default function AuthGate({ children }: AuthGateProps) {
     );
   }
 
-  // If logged in, render child pages
+  // If logged in, render child pages with navigation
   if (isAuthenticated) {
-    return <>{children}</>;
+    return (
+      <>
+        <Navbar />
+        <main className="flex-1 pb-24">
+          {children}
+        </main>
+        <BottomNav />
+        <PlanModal />
+      </>
+    );
   }
 
   // If unauthenticated, show Auth Landing
@@ -227,8 +249,6 @@ export default function AuthGate({ children }: AuthGateProps) {
             Data tersimpan aman di cloud & browser Anda, terisolasi 1 akun 1 catatan.
           </p>
         </div>
-
-
 
       </div>
     </div>

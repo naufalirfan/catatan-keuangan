@@ -1,8 +1,9 @@
 import React from 'react';
 import Link from 'next/link';
+import type { Metadata } from 'next';
 
-export const metadata = {
-  title: 'Penghapusan Data Pengguna - KashFolio',
+export const metadata: Metadata = {
+  title: 'Penghapusan Data Pengguna - KashFolio: Catatan Keuangan',
   description: 'Kebijakan dan panduan permohonan penghapusan akun serta data pengguna KashFolio: Catatan Keuangan.',
 };
 
@@ -17,16 +18,18 @@ export default function DeleteDataPage() {
           <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
             Permohonan Penghapusan Akun & Data (Data Deletion Request)
           </h1>
-          <p className="text-sm text-slate-400 mt-2">
-            Aplikasi: <strong>KashFolio: Catatan Keuangan</strong> | Developer: <strong>Naufal</strong>
-          </p>
-          <p className="text-xs text-slate-500">Terakhir diperbarui: 14 September 2026</p>
+          <div className="mt-2 text-sm text-slate-400 space-y-1">
+            <p>Aplikasi: <strong>KashFolio: Catatan Keuangan</strong></p>
+            <p>ID Paket: <code className="text-emerald-400 bg-slate-800 px-1.5 py-0.5 rounded text-xs">com.naufal.catatankeuangan</code></p>
+            <p>Pengembang: <strong>Naufal Irfansyah Saputra</strong></p>
+            <p className="text-xs text-slate-500 pt-1">Terakhir diperbarui: 10 Oktober 2026</p>
+          </div>
         </div>
 
         <section className="space-y-3">
           <h2 className="text-lg font-semibold text-emerald-400">1. Komitmen Privasi & Kendali Data</h2>
           <p className="text-sm text-slate-300 leading-relaxed">
-            KashFolio menghormati privasi dan hak kepemilikan data Anda. Anda memiliki hak penuh untuk meminta penghapusan akun beserta seluruh riwayat keuangan yang tersimpan di server kami kapan saja tanpa biaya.
+            KashFolio menghormati privasi dan hak kepemilikan data Anda. Anda memiliki hak penuh untuk meminta penghapusan akun beserta seluruh riwayat keuangan yang tersimpan di server kami kapan saja tanpa biaya apapun.
           </p>
         </section>
 

@@ -1,16 +1,15 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useFinance } from '@/context/FinanceContext';
 import { 
-  Wallet, 
   Sun, 
   Moon, 
   Cloud, 
   HardDrive, 
   LogOut,
-  Sparkles,
+  SlidersHorizontal,
   ChevronDown
 } from 'lucide-react';
 
@@ -57,27 +56,26 @@ export default function Navbar() {
   };
 
   return (
-    <header className="sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800/80 transition-colors">
+    <header className="sticky top-0 z-30 bg-[#fbfbfa]/90 dark:bg-[#0c0e12]/90 backdrop-blur-md border-b border-slate-200 dark:border-[#232a3b] transition-colors">
       <div className="max-w-md md:max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
         
         {/* Brand */}
         <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 via-teal-500 to-cyan-500 p-0.5 shadow-md shadow-emerald-500/20 group-hover:scale-105 transition-transform flex items-center justify-center">
-            <div className="w-full h-full bg-slate-900 rounded-[10px] flex items-center justify-center overflow-hidden p-1">
-              <img src="/flying-money.png" alt="KashFolio" className="w-full h-full object-contain drop-shadow" />
-            </div>
+          <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-[#141720] border border-slate-200 dark:border-[#232a3b] p-1 flex items-center justify-center transition-colors">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/flying-money.png" alt="KashFolio" className="w-full h-full object-contain" />
           </div>
           <div>
-            <div className="flex items-center gap-1.5">
-              <span className="font-extrabold text-slate-900 dark:text-white text-base tracking-tight">
-                Kash<span className="text-emerald-500">Folio</span>
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-slate-900 dark:text-white text-base tracking-tight">
+                Kash<span className="text-teal-600 dark:text-teal-400">Folio</span>
               </span>
-              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800">
-                <Sparkles className="w-2.5 h-2.5 text-emerald-500" /> AI
+              <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded-md bg-teal-500/10 text-teal-700 dark:text-teal-400 border border-teal-500/20">
+                PRO
               </span>
             </div>
-            <p className="text-[10px] text-slate-400 dark:text-slate-500 -mt-0.5 hidden sm:block">
-              Money & Expense Tracker
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 -mt-0.5 hidden sm:block">
+              Financial Ledger & Cashflow
             </p>
           </div>
         </Link>
@@ -88,16 +86,16 @@ export default function Navbar() {
           {/* Cloud / Local Sync Badge */}
           <div 
             title={isCloudConnected ? 'Tersinkron dengan Supabase Cloud' : 'Penyimpanan Offline Lokal Aktif'}
-            className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-100 dark:bg-[#141720] border border-slate-200 dark:border-[#232a3b] text-slate-600 dark:text-slate-300"
           >
             {isCloudConnected ? (
               <>
                 <Cloud className="w-3.5 h-3.5 text-emerald-500" />
-                <span className="text-[11px] hidden xs:inline">Cloud</span>
+                <span className="text-[11px] hidden xs:inline">Cloud Sync</span>
               </>
             ) : (
               <>
-                <HardDrive className="w-3.5 h-3.5 text-blue-500" />
+                <HardDrive className="w-3.5 h-3.5 text-slate-400" />
                 <span className="text-[11px] hidden xs:inline">Lokal</span>
               </>
             )}
@@ -107,7 +105,7 @@ export default function Navbar() {
           <button
             onClick={toggleTheme}
             aria-label="Ganti Tema"
-            className="p-2 rounded-xl text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            className="p-2.5 rounded-xl text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#141720] border border-transparent hover:border-slate-200 dark:hover:border-[#232a3b] transition-all"
           >
             {darkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
           </button>
@@ -117,17 +115,17 @@ export default function Navbar() {
             <div className="relative">
               <button
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
-                className="flex items-center gap-1.5 p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                className="flex items-center gap-1.5 p-1 rounded-xl hover:bg-slate-100 dark:hover:bg-[#141720] border border-transparent hover:border-slate-200 dark:hover:border-[#232a3b] transition-colors"
               >
                 {user.picture ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={user.picture}
                     alt={user.name}
-                    className="w-8 h-8 rounded-full border border-emerald-500/50 object-cover"
+                    className="w-7 h-7 rounded-lg border border-slate-200 dark:border-[#232a3b] object-cover"
                   />
                 ) : (
-                  <div className="w-8 h-8 rounded-full bg-emerald-600 text-white font-bold text-xs flex items-center justify-center shadow-sm">
+                  <div className="w-7 h-7 rounded-lg bg-teal-700 text-white font-bold text-xs flex items-center justify-center">
                     {user.name.charAt(0).toUpperCase()}
                   </div>
                 )}
@@ -140,12 +138,12 @@ export default function Navbar() {
                     className="fixed inset-0 z-40" 
                     onClick={() => setShowProfileMenu(false)} 
                   />
-                  <div className="absolute right-0 mt-2 w-56 p-2 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl z-50 animate-in fade-in zoom-in-95 duration-150">
-                    <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-700 mb-1">
+                  <div className="absolute right-0 mt-2 w-56 p-2 rounded-xl bg-white dark:bg-[#141720] border border-slate-200 dark:border-[#232a3b] shadow-xl z-50">
+                    <div className="px-3 py-2 border-b border-slate-100 dark:border-[#232a3b] mb-1">
                       <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
                         {user.name}
                       </p>
-                      <p className="text-[11px] text-slate-400 truncate">
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
                         {user.email}
                       </p>
                     </div>
@@ -153,9 +151,9 @@ export default function Navbar() {
                     <Link
                       href="/pengaturan"
                       onClick={() => setShowProfileMenu(false)}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium rounded-xl text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/60 transition-colors"
+                      className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium rounded-lg text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#1e2433] transition-colors"
                     >
-                      <Sparkles className="w-4 h-4 text-emerald-500" />
+                      <SlidersHorizontal className="w-4 h-4 text-teal-500" />
                       Pengaturan & AI Token
                     </Link>
 
@@ -164,7 +162,7 @@ export default function Navbar() {
                         setShowProfileMenu(false);
                         logout();
                       }}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium rounded-xl text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors mt-1"
+                      className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium rounded-lg text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors mt-1"
                     >
                       <LogOut className="w-4 h-4" />
                       Keluar
@@ -174,7 +172,6 @@ export default function Navbar() {
               )}
             </div>
           )}
-
         </div>
 
       </div>

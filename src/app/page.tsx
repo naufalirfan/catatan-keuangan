@@ -91,7 +91,7 @@ export default function DashboardPage() {
             {currentDateFormatted}
           </span>
           <h1 className="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-1.5">
-            Halo, {user?.name?.split(' ')[0] || 'Kawan'} <span>ðŸ‘‹</span>
+            Halo, {user?.name?.split(' ')[0] || 'Kawan'} <span>👋</span>
           </h1>
         </div>
 

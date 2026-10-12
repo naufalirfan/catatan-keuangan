@@ -10,7 +10,6 @@ import {
   UserX,
   Search,
   Plus,
-  Sparkles,
   Trash2,
   Users,
   CheckCircle2,
@@ -73,27 +72,24 @@ export default function SuperAdminMemberManager() {
   };
 
   return (
-    <div className="bg-slate-900/90 backdrop-blur-xl border border-amber-500/30 rounded-2xl p-6 shadow-2xl relative overflow-hidden mb-8">
-      {/* Glow Effect */}
-      <div className="absolute top-0 right-0 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
-      <div className="absolute bottom-0 left-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none -ml-20 -mb-20" />
-
+    <div className="bg-white dark:bg-[#141720] border border-amber-500/30 rounded-2xl p-5 md:p-6 shadow-sm mb-6 transition-colors">
+      
       {/* Header */}
-      <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-5">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 dark:border-[#232a3b] pb-5">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-amber-500 to-yellow-400 flex items-center justify-center shadow-lg shadow-amber-500/20 text-slate-950 font-black">
-            <ShieldCheck className="w-7 h-7" />
+          <div className="w-11 h-11 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 flex items-center justify-center font-black">
+            <ShieldCheck className="w-6 h-6" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-xl font-bold text-white tracking-tight">Superadmin Member Management</h2>
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1">
-                <Crown className="w-3 h-3 text-amber-400" />
-                Khusus Owner
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">Superadmin Member Management</h2>
+              <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30 flex items-center gap-1">
+                <Crown className="w-3 h-3 text-amber-500" />
+                Owner
               </span>
             </div>
-            <p className="text-sm text-slate-400">
-              Kelola status akun member PRO (5000/th) & FREE. Member yang request upgrade lewat Instagram (@naufal_irfansyah) dapat langsung diaktivasi di sini.
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Kelola status akun member PRO & FREE. Aktivasi member yang request via Instagram langsung dari sini.
             </p>
           </div>
         </div>
@@ -102,86 +98,86 @@ export default function SuperAdminMemberManager() {
           href="https://www.instagram.com/naufal_irfansyah"
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 transition"
+          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-[#1e2433] dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium border border-slate-200 dark:border-[#232a3b] transition"
         >
-          <span>DM Masuk: @naufal_irfansyah</span>
-          <ExternalLink className="w-3.5 h-3.5 text-pink-400" />
+          <span>DM: @naufal_irfansyah</span>
+          <ExternalLink className="w-3.5 h-3.5 text-pink-500" />
         </a>
       </div>
 
       {/* Stats Counter */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 my-5 relative z-10">
-        <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4 flex items-center gap-3.5">
-          <div className="w-10 h-10 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center">
-            <Users className="w-5 h-5" />
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 my-5">
+        <div className="bg-slate-50 dark:bg-[#1e2433] border border-slate-200 dark:border-[#232a3b] rounded-xl p-3.5 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center">
+            <Users className="w-4 h-4" />
           </div>
           <div>
-            <div className="text-2xl font-bold text-white">{totalMembers}</div>
-            <div className="text-xs text-slate-400 font-medium">Total Member Terdaftar</div>
+            <div className="text-xl font-bold text-slate-900 dark:text-white tabular-nums">{totalMembers}</div>
+            <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Total Member</div>
           </div>
         </div>
 
-        <div className="bg-slate-800/60 border border-amber-500/30 rounded-xl p-4 flex items-center gap-3.5">
-          <div className="w-10 h-10 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center">
-            <Crown className="w-5 h-5" />
+        <div className="bg-slate-50 dark:bg-[#1e2433] border border-amber-500/30 rounded-xl p-3.5 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center">
+            <Crown className="w-4 h-4" />
           </div>
           <div>
-            <div className="text-2xl font-bold text-amber-400">{proMembers}</div>
-            <div className="text-xs text-amber-300/80 font-medium">Member PRO (5000/th) ⭐</div>
+            <div className="text-xl font-bold text-amber-600 dark:text-amber-400 tabular-nums">{proMembers}</div>
+            <div className="text-[11px] text-amber-700 dark:text-amber-300 font-medium">Member PRO</div>
           </div>
         </div>
 
-        <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4 flex items-center gap-3.5">
-          <div className="w-10 h-10 rounded-lg bg-slate-700/50 text-slate-300 flex items-center justify-center">
-            <UserCheck className="w-5 h-5" />
+        <div className="bg-slate-50 dark:bg-[#1e2433] border border-slate-200 dark:border-[#232a3b] rounded-xl p-3.5 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center">
+            <UserCheck className="w-4 h-4" />
           </div>
           <div>
-            <div className="text-2xl font-bold text-slate-300">{freeMembers}</div>
-            <div className="text-xs text-slate-400 font-medium">Member FREE</div>
+            <div className="text-xl font-bold text-slate-700 dark:text-slate-200 tabular-nums">{freeMembers}</div>
+            <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Member FREE</div>
           </div>
         </div>
       </div>
 
       {/* Quick Add / Update Member Form */}
-      <div className="bg-slate-800/50 border border-slate-700/70 rounded-xl p-4 mb-6 relative z-10">
+      <div className="bg-slate-50 dark:bg-[#1e2433]/60 border border-slate-200 dark:border-[#232a3b] rounded-xl p-4 mb-5">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-slate-200 flex items-center gap-2">
-            <Plus className="w-4 h-4 text-emerald-400" />
-            Tambah atau Perbarui Status Member
+          <h3 className="text-xs font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+            <Plus className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+            Tambah / Update Status Member
           </h3>
-          <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30">
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30">
             Tarif PRO: 5000/th
           </span>
         </div>
 
         {successMsg && (
-          <div className="mb-3 p-3 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs flex items-center gap-2">
+          <div className="mb-3 p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
             <span>{successMsg}</span>
           </div>
         )}
 
-        <form onSubmit={handleSaveMember} className="grid grid-cols-1 md:grid-cols-12 gap-3">
+        <form onSubmit={handleSaveMember} className="grid grid-cols-1 md:grid-cols-12 gap-2.5">
           <div className="md:col-span-5 relative">
-            <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+            <Mail className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
             <input
               type="email"
-              placeholder="Email Google Member (cth: user@gmail.com)"
+              placeholder="Email Google Member"
               value={emailInput}
               onChange={(e) => setEmailInput(e.target.value)}
               required
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+              className="w-full bg-white dark:bg-[#141720] border border-slate-200 dark:border-[#232a3b] rounded-lg pl-8 pr-3 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-amber-500"
             />
           </div>
 
           <div className="md:col-span-3 relative">
-            <UserIcon className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+            <UserIcon className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
             <input
               type="text"
               placeholder="Nama (opsional)"
               value={nameInput}
               onChange={(e) => setNameInput(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+              className="w-full bg-white dark:bg-[#141720] border border-slate-200 dark:border-[#232a3b] rounded-lg pl-8 pr-3 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-amber-500"
             />
           </div>
 
@@ -189,10 +185,10 @@ export default function SuperAdminMemberManager() {
             <select
               value={selectedPlan}
               onChange={(e) => setSelectedPlan(e.target.value as UserPlan)}
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500"
+              className="w-full bg-white dark:bg-[#141720] border border-slate-200 dark:border-[#232a3b] rounded-lg px-2.5 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
             >
-              <option value="pro">PRO (⭐ 5000/th)</option>
-              <option value="free">FREE (Standar)</option>
+              <option value="pro">PRO (5000/th)</option>
+              <option value="free">FREE</option>
             </select>
           </div>
 
@@ -200,112 +196,101 @@ export default function SuperAdminMemberManager() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full py-2 px-3 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-950 font-bold rounded-lg text-sm shadow-md transition disabled:opacity-50 flex items-center justify-center gap-1.5"
+              className="w-full py-2 px-3 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-lg text-xs transition disabled:opacity-50 flex items-center justify-center gap-1"
             >
-              <Sparkles className="w-4 h-4" />
-              <span>{isSubmitting ? 'Menyimpan...' : 'Simpan Status'}</span>
+              <span>{isSubmitting ? 'Menyimpan...' : 'Simpan'}</span>
             </button>
           </div>
         </form>
       </div>
 
       {/* Member List Table */}
-      <div className="relative z-10">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mb-3">
-          <h3 className="text-sm font-semibold text-slate-300">
+      <div>
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-2.5 mb-3">
+          <h3 className="text-xs font-semibold text-slate-700 dark:text-slate-300">
             Daftar Member Terdata ({filteredMembers.length})
           </h3>
-          <div className="relative w-full sm:w-64">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+          <div className="relative w-full sm:w-60">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
             <input
               type="text"
               placeholder="Cari email atau nama..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
+              className="w-full bg-white dark:bg-[#141720] border border-slate-200 dark:border-[#232a3b] rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-amber-500"
             />
           </div>
         </div>
 
         {filteredMembers.length === 0 ? (
-          <div className="text-center py-8 bg-slate-800/30 rounded-xl border border-slate-800 text-slate-400 text-sm">
+          <div className="text-center py-6 bg-slate-50 dark:bg-[#1e2433] rounded-xl border border-slate-200 dark:border-[#232a3b] text-slate-500 dark:text-slate-400 text-xs">
             {members.length === 0
-              ? 'Belum ada member yang login atau ditambahkan. Tambahkan email di atas untuk memberi akses PRO.'
+              ? 'Belum ada member yang login atau ditambahkan.'
               : 'Tidak ada member yang cocok dengan pencarian.'}
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/40">
+          <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-[#232a3b] bg-white dark:bg-[#141720]">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-800/80 text-slate-300 border-b border-slate-700 uppercase tracking-wider font-semibold">
+              <thead className="bg-slate-50 dark:bg-[#1e2433] text-slate-600 dark:text-slate-300 border-b border-slate-200 dark:border-[#232a3b] uppercase tracking-wider font-semibold">
                 <tr>
-                  <th className="px-4 py-3">Member</th>
-                  <th className="px-4 py-3">Email</th>
-                  <th className="px-4 py-3">Status Saat Ini</th>
-                  <th className="px-4 py-3 text-right">Aksi Cepat</th>
+                  <th className="px-3.5 py-2.5">Member</th>
+                  <th className="px-3.5 py-2.5">Email</th>
+                  <th className="px-3.5 py-2.5">Status</th>
+                  <th className="px-3.5 py-2.5 text-right">Aksi</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800 text-slate-200">
+              <tbody className="divide-y divide-slate-100 dark:divide-[#232a3b] text-slate-700 dark:text-slate-200">
                 {filteredMembers.map((m) => {
                   const isPro = m.plan === 'pro';
                   return (
-                    <tr key={m.email} className="hover:bg-slate-800/40 transition">
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2.5">
+                    <tr key={m.email} className="hover:bg-slate-50 dark:hover:bg-[#1e2433]/50 transition">
+                      <td className="px-3.5 py-2.5">
+                        <div className="flex items-center gap-2">
                           {m.picture ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img
                               src={m.picture}
                               alt={m.name}
-                              className="w-7 h-7 rounded-full object-cover border border-slate-700"
+                              className="w-6 h-6 rounded-full object-cover border border-slate-200 dark:border-[#232a3b]"
                             />
                           ) : (
-                            <div className="w-7 h-7 rounded-full bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 flex items-center justify-center font-bold text-[10px]">
+                            <div className="w-6 h-6 rounded-full bg-teal-600/20 text-teal-700 dark:text-teal-300 flex items-center justify-center font-bold text-[9px]">
                               {m.name.charAt(0).toUpperCase()}
                             </div>
                           )}
-                          <span className="font-medium text-white">{m.name}</span>
+                          <span className="font-medium text-slate-900 dark:text-white truncate max-w-[120px]">{m.name}</span>
                         </div>
                       </td>
-                      <td className="px-4 py-3 font-mono text-slate-300">{m.email}</td>
-                      <td className="px-4 py-3">
+                      <td className="px-3.5 py-2.5 font-mono text-[11px] text-slate-600 dark:text-slate-400">{m.email}</td>
+                      <td className="px-3.5 py-2.5">
                         {isPro ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-gradient-to-r from-amber-500/20 to-yellow-500/20 text-amber-300 border border-amber-500/40">
-                            <Crown className="w-3 h-3 text-amber-400" />
-                            PRO MEMBER ⭐
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                            <Crown className="w-3 h-3 text-amber-500" />
+                            PRO
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-slate-800 text-slate-400 border border-slate-700">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
                             FREE
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-2">
+                      <td className="px-3.5 py-2.5 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
                           <button
                             onClick={() => handleTogglePlan(m.email, m.plan, m.name)}
-                            className={`px-2.5 py-1 rounded-md text-xs font-semibold transition flex items-center gap-1 ${
+                            className={`px-2 py-0.5 rounded text-[11px] font-semibold transition ${
                               isPro
-                                ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
-                                : 'bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-950 shadow-sm'
+                                ? 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
+                                : 'bg-amber-500 hover:bg-amber-600 text-slate-950'
                             }`}
                           >
-                            {isPro ? (
-                              <>
-                                <UserX className="w-3 h-3" />
-                                <span>Kembalikan Free</span>
-                              </>
-                            ) : (
-                              <>
-                                <Crown className="w-3 h-3" />
-                                <span>Jadikan PRO ⭐</span>
-                              </>
-                            )}
+                            {isPro ? 'Ke Free' : 'Ke PRO'}
                           </button>
 
                           <button
                             onClick={() => handleDelete(m.email)}
-                            title="Hapus dari daftar"
-                            className="p-1 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded transition"
+                            title="Hapus"
+                            className="p-1 text-slate-400 hover:text-rose-500 transition"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -319,6 +304,7 @@ export default function SuperAdminMemberManager() {
           </div>
         )}
       </div>
+
     </div>
   );
 }

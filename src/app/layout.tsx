@@ -58,7 +58,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans">
+      <body className="min-h-screen flex flex-col bg-[#fbfbfa] dark:bg-[#0c0e12] text-slate-900 dark:text-[#f8fafc] font-sans transition-colors duration-200">
         <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" />
         <FinanceProvider>
           <AuthGate>

@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -105,6 +105,7 @@ export default function Navbar() {
           <button
             onClick={toggleTheme}
             aria-label="Ganti Tema"
+            title={darkMode ? "Beralih ke Mode Siang" : "Beralih ke Mode Malam"}
             className="p-2.5 rounded-xl text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#141720] border border-transparent hover:border-slate-200 dark:hover:border-[#232a3b] transition-all"
           >
             {darkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}

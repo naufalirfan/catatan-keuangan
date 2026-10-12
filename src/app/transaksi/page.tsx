@@ -139,7 +139,7 @@ export default function TransaksiPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Cari transaksi, toko, atau catatan..."
-              className="w-full pl-9 pr-9 py-2.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm"
+              className="w-full pl-9 pr-9 py-2.5 rounded-2xl bg-white dark:bg-[#121826] border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm"
             />
             {searchQuery && (
               <button
@@ -156,7 +156,7 @@ export default function TransaksiPage() {
             className={`p-2.5 rounded-2xl border transition-colors ${
               showFilters || filterCategory !== 'all' || filterAccount !== 'all'
                 ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-500 text-emerald-600 dark:text-emerald-400'
-                : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-500'
+                : 'bg-white dark:bg-[#121826] border-slate-200 dark:border-slate-800 text-slate-500'
             }`}
           >
             <Filter className="w-4 h-4" />
@@ -177,7 +177,7 @@ export default function TransaksiPage() {
               className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
                 filterPeriod === p.value
                   ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm'
-                  : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:bg-slate-50'
+                  : 'bg-white dark:bg-[#121826] text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:bg-slate-50'
               }`}
             >
               {p.label}
@@ -186,7 +186,7 @@ export default function TransaksiPage() {
         </div>
 
         {/* Type Filter Tabs */}
-        <div className="grid grid-cols-4 gap-1 p-1 bg-slate-100 dark:bg-slate-900 rounded-2xl text-xs font-semibold">
+        <div className="grid grid-cols-4 gap-1 p-1 bg-slate-100 dark:bg-[#121826] rounded-2xl text-xs font-semibold">
           {[
             { label: 'Semua', value: 'all' },
             { label: 'Pengeluaran', value: 'expense' },
@@ -209,7 +209,7 @@ export default function TransaksiPage() {
 
         {/* Extended Filters (Category & Account) */}
         {showFilters && (
-          <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm grid grid-cols-2 gap-2 animate-in fade-in duration-150">
+          <div className="p-3.5 rounded-2xl bg-white dark:bg-[#121826] border border-slate-200 dark:border-slate-800 shadow-sm grid grid-cols-2 gap-2 animate-in fade-in duration-150">
             <div>
               <label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">
                 Kategori
@@ -250,7 +250,7 @@ export default function TransaksiPage() {
       </div>
 
       {/* Filter Summary Banner */}
-      <div className="p-3 rounded-2xl bg-slate-100 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 flex items-center justify-between text-xs">
+      <div className="p-3 rounded-2xl bg-slate-100 dark:bg-[#121826]/60 border border-slate-200/80 dark:border-slate-800 flex items-center justify-between text-xs">
         <div className="flex items-center gap-1.5">
           <ArrowDownCircle className="w-4 h-4 text-rose-500" />
           <span className="font-semibold text-rose-500">
@@ -267,7 +267,7 @@ export default function TransaksiPage() {
 
       {/* Grouped Transaction List */}
       {Object.keys(groupedTransactions).length === 0 ? (
-        <div className="p-12 text-center rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2">
+        <div className="p-12 text-center rounded-3xl bg-white dark:bg-[#121826] border border-slate-200 dark:border-slate-800 space-y-2">
           <p className="text-xs font-semibold text-slate-500">
             Tidak ada transaksi yang cocok dengan filter.
           </p>
@@ -322,7 +322,7 @@ export default function TransaksiPage() {
                           setSelectedTx(tx);
                           setIsDetailOpen(true);
                         }}
-                        className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center justify-between group hover:border-slate-300 dark:hover:border-slate-700 transition-colors cursor-pointer"
+                        className="p-3.5 rounded-2xl bg-white dark:bg-[#121826] border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center justify-between group hover:border-slate-300 dark:hover:border-slate-700 transition-colors cursor-pointer"
                       >
                         <div className="flex items-center gap-3 min-w-0">
                           <div

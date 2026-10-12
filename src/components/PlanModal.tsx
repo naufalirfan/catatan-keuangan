@@ -53,7 +53,7 @@ export default function PlanModal() {
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden max-h-[95vh] flex flex-col animate-in slide-in-from-bottom-6 duration-200">
+      <div className="w-full max-w-md bg-white dark:bg-[#121826] rounded-t-3xl sm:rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden max-h-[95vh] flex flex-col animate-in slide-in-from-bottom-6 duration-200">
         
         {/* Header */}
         <div className="relative px-6 pt-6 pb-4 text-center bg-gradient-to-b from-emerald-500/10 via-teal-500/5 to-transparent border-b border-slate-100 dark:border-slate-800">
@@ -90,7 +90,7 @@ export default function PlanModal() {
           <div className={`relative p-5 rounded-3xl border-2 transition-all ${
             userPlan === 'pro'
               ? 'border-emerald-500 bg-gradient-to-b from-emerald-50/50 to-white dark:from-emerald-950/30 dark:to-slate-900 shadow-xl shadow-emerald-500/10'
-              : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-emerald-300'
+              : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-[#121826] hover:border-emerald-300'
           }`}>
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
@@ -224,7 +224,7 @@ export default function PlanModal() {
           <div className={`p-4 rounded-3xl border transition-all ${
             userPlan === 'free'
               ? 'border-slate-400 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/40 shadow-sm'
-              : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/40'
+              : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-[#121826]/40'
           }`}>
             <div className="flex items-center justify-between mb-2">
               <div>

@@ -122,7 +122,7 @@ export default function HutangPage() {
           onClick={() => setActiveTab('unpaid')}
           className={`py-2 rounded-xl transition-all ${
             activeTab === 'unpaid'
-              ? 'bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-sm'
+              ? 'bg-white dark:bg-[#121826] text-sky-600 dark:text-sky-400 shadow-sm'
               : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
           }`}
         >
@@ -132,7 +132,7 @@ export default function HutangPage() {
           onClick={() => setActiveTab('paid')}
           className={`py-2 rounded-xl transition-all ${
             activeTab === 'paid'
-              ? 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-sm'
+              ? 'bg-white dark:bg-[#121826] text-emerald-600 dark:text-emerald-400 shadow-sm'
               : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
           }`}
         >
@@ -163,7 +163,7 @@ export default function HutangPage() {
 
       {/* Debt Cards List Matching Screenshot 8 & 9 */}
       {filteredDebts.length === 0 ? (
-        <div className="p-12 text-center rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2">
+        <div className="p-12 text-center rounded-3xl bg-white dark:bg-[#121826] border border-slate-200 dark:border-slate-800 space-y-2">
           <p className="text-xs font-semibold text-slate-500">
             Tidak ada catatan hutang pada tab ini.
           </p>
@@ -183,7 +183,7 @@ export default function HutangPage() {
             return (
               <div
                 key={item.id}
-                className="bg-white dark:bg-slate-900 rounded-3xl p-4 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-3 hover:border-slate-300 dark:hover:border-slate-700 transition-colors"
+                className="bg-white dark:bg-[#121826] rounded-3xl p-4 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-3 hover:border-slate-300 dark:hover:border-slate-700 transition-colors"
               >
                 {/* Card Top: Avatar + Person Name + Status Badge */}
                 <div className="flex items-center justify-between">
@@ -304,7 +304,7 @@ export default function HutangPage() {
       {/* Modal Add Debt */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-[32px] border border-slate-200 dark:border-slate-800 shadow-2xl p-5 space-y-4 animate-in zoom-in-95 duration-200">
+          <div className="w-full max-w-sm bg-white dark:bg-[#121826] rounded-[32px] border border-slate-200 dark:border-slate-800 shadow-2xl p-5 space-y-4 animate-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
               <h3 className="text-sm font-bold text-slate-800 dark:text-white">
                 Tambah Catatan Hutang
@@ -400,7 +400,7 @@ export default function HutangPage() {
       {/* Modal Pay Installment */}
       {isPayModalOpen && selectedDebt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-[32px] border border-slate-200 dark:border-slate-800 shadow-2xl p-5 space-y-4 animate-in zoom-in-95 duration-200">
+          <div className="w-full max-w-sm bg-white dark:bg-[#121826] rounded-[32px] border border-slate-200 dark:border-slate-800 shadow-2xl p-5 space-y-4 animate-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
               <h3 className="text-sm font-bold text-slate-800 dark:text-white">
                 Catat Pembayaran / Cicilan

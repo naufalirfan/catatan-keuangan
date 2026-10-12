@@ -61,7 +61,7 @@ function CallbackContent() {
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-b from-slate-50 via-emerald-50/30 to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
-      <div className="w-full max-w-sm p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl text-center space-y-5">
+      <div className="w-full max-w-sm p-6 rounded-3xl bg-white dark:bg-[#121826] border border-slate-200 dark:border-slate-800 shadow-2xl text-center space-y-5">
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-emerald-500/10 text-emerald-500 mx-auto">
           {status === 'loading' ? (
             <Loader2 className="w-8 h-8 animate-spin" />
@@ -121,7 +121,7 @@ export default function AuthCallbackPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-[#0a0e17]">
           <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
         </div>
       }

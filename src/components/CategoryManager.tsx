@@ -148,7 +148,7 @@ export default function CategoryManager() {
   };
 
   return (
-    <div className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
+    <div className="p-5 rounded-3xl bg-white dark:bg-[#121826] border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2.5">
@@ -281,7 +281,7 @@ export default function CategoryManager() {
       {/* Modal Tambah / Edit Kategori */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full max-w-sm rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl p-5 space-y-4 max-h-[90vh] overflow-y-auto">
+          <div className="w-full max-w-sm rounded-3xl bg-white dark:bg-[#121826] border border-slate-200 dark:border-slate-800 shadow-2xl p-5 space-y-4 max-h-[90vh] overflow-y-auto">
             {/* Modal Header */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">

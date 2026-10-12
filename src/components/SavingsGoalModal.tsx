@@ -188,7 +188,7 @@ export default function SavingsGoalModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in">
-      <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="w-full max-w-md bg-white dark:bg-[#121826] rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         
         {/* Header */}
         <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
@@ -450,7 +450,7 @@ export default function SavingsGoalModal({
         </div>
 
         {/* Footer Actions */}
-        <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 bg-slate-50/50 dark:bg-slate-900/50">
+        <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 bg-slate-50/50 dark:bg-[#121826]/50">
           {mode === 'deposit' ? (
             <div className="flex items-center justify-between w-full gap-2">
               <button

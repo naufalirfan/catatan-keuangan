@@ -149,7 +149,7 @@ export default function RekeningPage() {
       )}
 
       {/* Total Card */}
-      <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center gap-4 mb-4">
+      <div className="bg-white dark:bg-[#121826] rounded-3xl p-4 border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center gap-4 mb-4">
         <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center shrink-0">
           <Wallet className="w-6 h-6" />
         </div>
@@ -164,7 +164,7 @@ export default function RekeningPage() {
       </div>
 
       {/* Accounts List */}
-      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm divide-y divide-slate-100 dark:divide-slate-800 overflow-hidden">
+      <div className="bg-white dark:bg-[#121826] rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm divide-y divide-slate-100 dark:divide-slate-800 overflow-hidden">
         {accounts.map((acc) => {
           const IconComponent = getAccountIcon(acc.type);
           return (
@@ -221,7 +221,7 @@ export default function RekeningPage() {
       {/* Add / Edit Account Modal */}
       {isAddEditModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-[32px] border border-slate-200 dark:border-slate-800 shadow-2xl p-5 space-y-4 animate-in zoom-in-95 duration-200">
+          <div className="w-full max-w-sm bg-white dark:bg-[#121826] rounded-[32px] border border-slate-200 dark:border-slate-800 shadow-2xl p-5 space-y-4 animate-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
               <h3 className="text-sm font-bold text-slate-800 dark:text-white">
                 {editingAccount ? 'Edit Rekening' : 'Tambah Rekening'}

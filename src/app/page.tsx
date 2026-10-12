@@ -525,29 +525,31 @@ export default function DashboardPage() {
 
       {/* Superadmin Collapsible Management Widget */}
       {isSuperAdmin && (
-        <div className="rounded-3xl border border-amber-500/25 bg-amber-500/5 dark:bg-amber-950/20 p-4 space-y-3">
+        <div className="rounded-3xl border border-emerald-500/25 bg-emerald-500/5 dark:bg-[#121826] p-4.5 space-y-3 shadow-md">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-amber-500" />
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
+                <ShieldCheck className="w-4 h-4" />
+              </div>
               <div>
-                <span className="text-xs font-bold text-amber-900 dark:text-amber-300 block">
+                <span className="text-xs font-bold text-slate-900 dark:text-white block">
                   Superadmin Panel ({user?.email || 'Owner'})
                 </span>
-                <span className="text-[10px] text-amber-700/80 dark:text-amber-400/80">
-                  Simulasi aktif: <strong className="uppercase">{userPlan}</strong>
+                <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                  Simulasi aktif: <strong className="uppercase font-bold text-emerald-600 dark:text-emerald-400">{userPlan}</strong>
                 </span>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setUserPlan(userPlan === 'pro' ? 'free' : 'pro')}
-                className="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-[11px] transition-colors"
+                className="px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-[11px] hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
               >
-                Switch ke {userPlan === 'pro' ? 'FREE' : 'PRO'}
+                Switch: {userPlan === 'pro' ? 'FREE' : 'PRO'}
               </button>
               <button
                 onClick={() => setShowAdminMemberManager(!showAdminMemberManager)}
-                className="px-2.5 py-1 rounded-lg border border-amber-500/40 text-amber-700 dark:text-amber-300 font-bold text-[11px] hover:bg-amber-500/10 transition-colors"
+                className="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-[11px] transition-colors shadow-sm"
               >
                 {showAdminMemberManager ? 'Tutup Panel' : 'Kelola Member'}
               </button>
@@ -555,7 +557,7 @@ export default function DashboardPage() {
           </div>
 
           {showAdminMemberManager && (
-            <div className="pt-3 border-t border-amber-500/20">
+            <div className="pt-2">
               <SuperAdminMemberManager />
             </div>
           )}

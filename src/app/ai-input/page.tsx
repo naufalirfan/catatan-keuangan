@@ -269,7 +269,7 @@ export default function AiInputPage() {
       </div>
 
       {/* Mode Switcher */}
-      <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-100 dark:bg-slate-900 rounded-2xl text-xs font-semibold">
+      <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-100 dark:bg-[#121826] rounded-2xl text-xs font-semibold">
         <button
           type="button"
           onClick={() => setMode('text')}
@@ -355,7 +355,7 @@ export default function AiInputPage() {
       )}
 
       {/* Main Input Box */}
-      <div className="p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
+      <div className="p-4 rounded-3xl bg-white dark:bg-[#121826] border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
         
         {/* If Image Uploaded Preview */}
         {receiptImage && (
@@ -504,7 +504,7 @@ export default function AiInputPage() {
                 setInputText(p);
                 setMode('text');
               }}
-              className="text-left text-xs p-2.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:border-emerald-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all shadow-sm"
+              className="text-left text-xs p-2.5 rounded-2xl bg-white dark:bg-[#121826] border border-slate-200/80 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:border-emerald-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all shadow-sm"
             >
               &ldquo;{p}&rdquo;
             </button>
@@ -526,7 +526,7 @@ export default function AiInputPage() {
       {/* Modal Dialog Pemilihan Sumber Foto (Kamera vs Galeri) */}
       {showSourceModal && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150">
-          <div className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4">
+          <div className="w-full max-w-sm bg-white dark:bg-[#121826] rounded-3xl p-5 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
               <div>
                 <h3 className="font-bold text-slate-900 dark:text-white text-base">Unggah Foto Struk</h3>

@@ -98,7 +98,7 @@ export default function AuthGate({ children }: AuthGateProps) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-[#0a0e17]">
         <div className="flex flex-col items-center gap-3">
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg shadow-emerald-500/30 animate-bounce p-2.5">
             <img src="/flying-money.png" alt="KashFolio" className="w-full h-full object-contain drop-shadow" />
@@ -147,7 +147,7 @@ export default function AuthGate({ children }: AuthGateProps) {
         </div>
 
         {/* Feature Highlights Card */}
-        <div className="p-4 rounded-3xl bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 backdrop-blur-md shadow-sm space-y-3">
+        <div className="p-4 rounded-3xl bg-white/80 dark:bg-[#121826]/80 border border-slate-200/80 dark:border-slate-800 backdrop-blur-md shadow-sm space-y-3">
           <div className="flex items-start gap-3">
             <div className="p-2 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400">
               <Bot className="w-4 h-4" />
@@ -192,7 +192,7 @@ export default function AuthGate({ children }: AuthGateProps) {
         </div>
 
         {/* Login Options Card */}
-        <div className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl space-y-4 text-center">
+        <div className="p-5 rounded-3xl bg-white dark:bg-[#121826] border border-slate-200 dark:border-slate-800 shadow-xl space-y-4 text-center">
           
           <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
             Masuk dengan Akun Anda

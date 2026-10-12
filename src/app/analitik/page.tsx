@@ -226,7 +226,7 @@ export default function AnalitikPage() {
       </div>
 
       {/* Top Main Navigation Tabs (3 Menu Utama) */}
-      <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 dark:bg-slate-900/90 rounded-2xl text-xs font-semibold">
+      <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 dark:bg-[#121826]/90 rounded-2xl text-xs font-semibold">
         <button
           type="button"
           onClick={() => setMainTab('analytics')}
@@ -283,7 +283,7 @@ export default function AnalitikPage() {
       {mainTab === 'analytics' && (
         <div className="space-y-5 animate-in fade-in">
           {/* Monthly Health Card */}
-          <div className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
+          <div className="p-5 rounded-3xl bg-white dark:bg-[#121826] border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
                 Ringkasan Arus Kas {currentMonthStr}
@@ -337,7 +337,7 @@ export default function AnalitikPage() {
           </div>
 
           {/* Interactive Charts Section */}
-          <div className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
+          <div className="p-5 rounded-3xl bg-white dark:bg-[#121826] border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl text-xs font-semibold">
                 <button
@@ -487,7 +487,7 @@ export default function AnalitikPage() {
           </div>
 
           {/* Category Expenses Breakdown Table */}
-          <div className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-3">
+          <div className="p-5 rounded-3xl bg-white dark:bg-[#121826] border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-3">
             <div className="flex items-center justify-between">
               <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
                 Rincian Kategori Pengeluaran
@@ -650,7 +650,7 @@ export default function AnalitikPage() {
                 return (
                   <div
                     key={cat.id}
-                    className="p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-3"
+                    className="p-4 rounded-3xl bg-white dark:bg-[#121826] border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-3"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
@@ -778,7 +778,7 @@ export default function AnalitikPage() {
           {/* List of Savings Goals */}
           <div className="space-y-3.5">
             {savingsGoals.length === 0 ? (
-              <div className="p-8 text-center rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 space-y-3">
+              <div className="p-8 text-center rounded-3xl bg-white dark:bg-[#121826] border border-slate-200/80 dark:border-slate-800 space-y-3">
                 <Coins className="w-12 h-12 text-slate-300 mx-auto" />
                 <div>
                   <h3 className="text-sm font-bold text-slate-900 dark:text-white">
@@ -806,7 +806,7 @@ export default function AnalitikPage() {
                 return (
                   <div
                     key={goal.id}
-                    className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4 hover:border-slate-300 dark:hover:border-slate-700 transition-all"
+                    className="p-5 rounded-3xl bg-white dark:bg-[#121826] border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4 hover:border-slate-300 dark:hover:border-slate-700 transition-all"
                   >
                     {/* Header Target Card */}
                     <div className="flex items-start justify-between">

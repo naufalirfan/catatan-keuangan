@@ -524,7 +524,7 @@ export default function PengaturanPage() {
 
       {/* Member View vs Superadmin Configuration Box */}
       {!isSuperAdmin ? (
-        <div className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-3">
+        <div className="p-5 rounded-3xl bg-white dark:bg-[#121826] border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-3">
           <div className="flex items-center gap-2.5">
             <div className="p-2.5 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-600 text-white shadow-sm shadow-emerald-500/20">
               <Sparkles className="w-5 h-5" />
@@ -549,7 +549,7 @@ export default function PengaturanPage() {
           </div>
         </div>
       ) : (
-        <div className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
+        <div className="p-5 rounded-3xl bg-white dark:bg-[#121826] border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="p-2 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-600 text-white shadow-sm shadow-emerald-500/20">
@@ -752,7 +752,7 @@ export default function PengaturanPage() {
                 return (
                   <div
                     key={idx}
-                    className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40 space-y-2"
+                    className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-[#121826]/40 space-y-2"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5 flex-wrap">
@@ -1121,7 +1121,7 @@ export default function PengaturanPage() {
                     value={modelSearchQuery}
                     onChange={(e) => setModelSearchQuery(e.target.value)}
                     placeholder="Ketik untuk filter (misal: gemini, claude, flash, kilo)..."
-                    className="w-full pl-8 pr-3 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                    className="w-full pl-8 pr-3 py-1.5 rounded-lg bg-white dark:bg-[#121826] border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-cyan-500"
                   />
                 </div>
 
@@ -1132,7 +1132,7 @@ export default function PengaturanPage() {
                     .map((m) => (
                       <div
                         key={m}
-                        className="p-1.5 rounded-lg bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-between gap-2 text-xs hover:border-cyan-300 dark:hover:border-cyan-700 transition-colors"
+                        className="p-1.5 rounded-lg bg-white dark:bg-[#121826]/90 border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-between gap-2 text-xs hover:border-cyan-300 dark:hover:border-cyan-700 transition-colors"
                       >
                         <span className="font-mono text-[11px] truncate text-slate-800 dark:text-slate-200" title={m}>
                           {m}
@@ -1202,7 +1202,7 @@ export default function PengaturanPage() {
       )}
 
       {/* Account & OAuth Status Card */}
-      <div className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-3">
+      <div className="p-5 rounded-3xl bg-white dark:bg-[#121826] border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-3">
         <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
           <ShieldCheck className="w-4 h-4 text-emerald-500" />
           Akun & Google OAuth
@@ -1314,7 +1314,7 @@ export default function PengaturanPage() {
       <CategoryManager />
 
       {/* Backup & Restore Data Card */}
-      <div className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-3">
+      <div className="p-5 rounded-3xl bg-white dark:bg-[#121826] border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-3">
         <h2 className="text-sm font-bold text-slate-900 dark:text-white">
           Cadangan & Pemulihan Data
         </h2>

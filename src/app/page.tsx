@@ -482,7 +482,7 @@ export default function DashboardPage() {
                     </p>
                     <p className="text-[10px] text-slate-400 flex items-center gap-1.5 mt-0.5">
                       <span className="font-semibold text-slate-500 dark:text-slate-400">{tx.account_name}</span>
-                      <span>â€¢</span>
+                      <span>•</span>
                       <span>{tx.date}</span>
                     </p>
                   </div>

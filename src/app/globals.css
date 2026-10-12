@@ -3,12 +3,12 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: #fbfbfa;
+  --background: #f8fafc;
   --foreground: #0f172a;
 }
 
 .dark {
-  --background: #0c0e12;
+  --background: #0a0e17;
   --foreground: #f8fafc;
 }
 
@@ -25,17 +25,14 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Ensure tabular figures on numeric displays */
 .tabular-nums {
   font-variant-numeric: tabular-nums;
 }
 
-/* Mobile safe padding */
 .safe-area-pb {
-  padding-bottom: env(safe-area-inset-bottom, 1rem);
+  padding-bottom: env(safe-area-inset-bottom, 1.25rem);
 }
 
-/* Custom scrollbar - subdued & minimal */
 ::-webkit-scrollbar {
   width: 5px;
   height: 5px;
@@ -46,15 +43,10 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.25);
+  background: rgba(148, 163, 184, 0.3);
   border-radius: 9999px;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(148, 163, 184, 0.45);
-}
-
-/* Enhanced Date & Time Picker Styles */
 input[type="date"],
 input[type="time"] {
   cursor: pointer;
@@ -63,17 +55,4 @@ input[type="time"] {
 .dark input[type="date"]::-webkit-calendar-picker-indicator,
 .dark input[type="time"]::-webkit-calendar-picker-indicator {
   filter: invert(0.9);
-}
-
-@keyframes spinSlow {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.animate-spin-slow {
-  animation: spinSlow 8s linear infinite;
 }

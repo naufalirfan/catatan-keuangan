@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React from 'react';
 import Link from 'next/link';
@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { 
   Home, 
   ReceiptText, 
-  Camera, 
+  Plus, 
   PieChart, 
   Settings 
 } from 'lucide-react';
@@ -21,14 +21,14 @@ export default function BottomNav({ onOpenManualModal }: BottomNavProps) {
   const navItems = [
     { label: 'Beranda', href: '/', icon: Home },
     { label: 'Transaksi', href: '/transaksi', icon: ReceiptText },
-    { label: 'Scan AI', href: '/ai-input', icon: Camera, isHighlight: true },
+    { label: 'Input', href: '/ai-input', icon: Plus, isHighlight: true },
     { label: 'Analitik', href: '/analitik', icon: PieChart },
     { label: 'Pengaturan', href: '/pengaturan', icon: Settings },
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-[#fbfbfa]/95 dark:bg-[#141720]/95 backdrop-blur-lg border-t border-slate-200 dark:border-[#232a3b] safe-area-pb transition-colors">
-      <div className="max-w-md md:max-w-xl mx-auto px-3 h-16 flex items-center justify-around">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/90 dark:bg-[#0a0e17]/90 backdrop-blur-xl border-t border-slate-200/80 dark:border-slate-800/80 safe-area-pb transition-colors">
+      <div className="max-w-md md:max-w-xl mx-auto px-4 h-16 flex items-center justify-around">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
           const Icon = item.icon;
@@ -38,14 +38,14 @@ export default function BottomNav({ onOpenManualModal }: BottomNavProps) {
               <Link
                 key={item.href}
                 href={item.href}
-                className="relative -top-3 flex flex-col items-center group min-w-[56px] min-h-[44px] justify-center"
-                aria-label="Scan & Input Transaksi"
+                className="relative -top-4 flex flex-col items-center group"
+                aria-label="Catat Transaksi Baru"
               >
-                <div className="w-12 h-12 rounded-xl bg-teal-600 hover:bg-teal-500 text-white shadow-sm flex items-center justify-center transition-all active:scale-95 border border-teal-500/40">
-                  <Camera className="w-5 h-5 text-white" />
+                <div className="w-13 h-13 rounded-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-lg shadow-emerald-500/35 flex items-center justify-center transition-all active:scale-90 border-2 border-white dark:border-[#0a0e17]">
+                  <Plus className="w-6 h-6 stroke-[2.5]" />
                 </div>
-                <span className="text-[10px] font-semibold text-slate-700 dark:text-slate-300 mt-1">
-                  {item.label}
+                <span className="text-[10px] font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                  Catat
                 </span>
               </Link>
             );
@@ -55,16 +55,16 @@ export default function BottomNav({ onOpenManualModal }: BottomNavProps) {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-col items-center justify-center min-w-[54px] min-h-[44px] py-1 px-2 rounded-xl transition-colors ${
+              className={`flex flex-col items-center justify-center min-w-[54px] min-h-[44px] py-1 px-2 rounded-xl transition-all ${
                 isActive
-                  ? 'text-teal-600 dark:text-teal-400 font-semibold'
-                  : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
+                  ? 'text-emerald-600 dark:text-emerald-400 font-bold'
+                  : 'text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-300'
               }`}
             >
               <div className="relative">
-                <Icon className={`w-5 h-5 transition-transform ${isActive ? 'scale-105' : ''}`} />
+                <Icon className={`w-5 h-5 transition-transform ${isActive ? 'scale-110 stroke-[2.5]' : ''}`} />
                 {isActive && (
-                  <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-teal-600 dark:bg-teal-400 rounded-full" />
+                  <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-emerald-500 rounded-full" />
                 )}
               </div>
               <span className="text-[11px] mt-1 tracking-tight">

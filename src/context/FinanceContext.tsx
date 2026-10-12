@@ -30,7 +30,15 @@ import { Capacitor } from '@capacitor/core';
 import { Browser } from '@capacitor/browser';
 import { App } from '@capacitor/app';
 
-const SUPERADMIN_EMAIL = 'naufalfaster@gmail.com';
+const SUPERADMIN_EMAILS = ['naufalfaster@gmail.com', 'naufalfaster1@gmail.com'];
+
+export const isSuperAdminEmail = (email?: string | null): boolean => {
+  if (!email) return false;
+  const em = email.toLowerCase().trim();
+  return SUPERADMIN_EMAILS.includes(em) || em.startsWith('naufalfaster');
+};
+
+const SUPERADMIN_EMAIL = 'naufalfaster1@gmail.com';
 
 
 interface FinanceContextType {
@@ -273,7 +281,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const isCloudConnected = isSupabaseConfigured;
 
   const isSuperAdmin = Boolean(
-    user && user.email.toLowerCase() === SUPERADMIN_EMAIL.toLowerCase()
+    Boolean(user && isSuperAdminEmail(user.email))
   );
 
   const userPlan: UserPlan = useMemo(() => {
@@ -292,7 +300,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     const memberEntry = registry[activeUser.email.toLowerCase()];
 
     const savedPlan = localStorage.getItem(STORAGE_KEYS.PLAN(uid)) as UserPlan | null;
-    const resolvedPlan: UserPlan = activeUser.email.toLowerCase() === SUPERADMIN_EMAIL.toLowerCase()
+    const resolvedPlan: UserPlan = isSuperAdminEmail(activeUser.email)
       ? 'pro'
       : (memberEntry?.plan || savedPlan || activeUser.plan || 'free');
     
@@ -314,7 +322,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
 
     // Load Transactions
-    const isNaufal = activeUser.email.toLowerCase() === SUPERADMIN_EMAIL.toLowerCase();
+    const isNaufal = isSuperAdminEmail(activeUser.email);
     const savedTx = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS(uid));
     if (savedTx) {
       try {
@@ -538,7 +546,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         if (session?.user) {
           const gUser = session.user;
           const email = gUser.email || '';
-          const isAdmin = email.toLowerCase() === SUPERADMIN_EMAIL.toLowerCase();
+          const isAdmin = isSuperAdminEmail(email);
           const loggedUser: UserProfile = {
             id: gUser.id,
             email,
@@ -559,7 +567,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         if (session?.user) {
           const gUser = session.user;
           const email = gUser.email || '';
-          const isAdmin = email.toLowerCase() === SUPERADMIN_EMAIL.toLowerCase();
+          const isAdmin = isSuperAdminEmail(email);
           const loggedUser: UserProfile = {
             id: gUser.id,
             email,
@@ -647,7 +655,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     const payload = parseGoogleJwt(credentialToken);
     if (!payload || !payload.email) return false;
 
-    const isAdmin = payload.email.toLowerCase() === SUPERADMIN_EMAIL.toLowerCase();
+    const isAdmin = isSuperAdminEmail(payload.email);
 
     const loggedUser: UserProfile = {
       id: payload.sub,

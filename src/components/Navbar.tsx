@@ -10,11 +10,12 @@ import {
   HardDrive, 
   LogOut,
   SlidersHorizontal,
-  ChevronDown
+  ChevronDown,
+  ShieldCheck
 } from 'lucide-react';
 
 export default function Navbar() {
-  const { user, logout, isCloudConnected } = useFinance();
+  const { user, logout, isCloudConnected, isSuperAdmin } = useFinance();
   const [darkMode, setDarkMode] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
       try {
@@ -141,13 +142,31 @@ export default function Navbar() {
                   />
                   <div className="absolute right-0 mt-2 w-56 p-2 rounded-2xl bg-white dark:bg-[#121826] border border-slate-200 dark:border-slate-800 shadow-xl z-50">
                     <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800 mb-1">
-                      <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
-                        {user.name}
-                      </p>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                      <div className="flex items-center justify-between gap-1">
+                        <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                          {user.name}
+                        </p>
+                        {isSuperAdmin && (
+                          <span className="px-1.5 py-0.5 rounded-full text-[9px] font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                            OWNER
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate font-mono">
                         {user.email}
                       </p>
                     </div>
+
+                    {isSuperAdmin && (
+                      <Link
+                        href="/pengaturan"
+                        onClick={() => setShowProfileMenu(false)}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold rounded-xl text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 transition-colors mb-1"
+                      >
+                        <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                        Panel Superadmin
+                      </Link>
+                    )}
 
                     <Link
                       href="/pengaturan"

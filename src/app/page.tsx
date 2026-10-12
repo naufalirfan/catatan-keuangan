@@ -54,6 +54,7 @@ export default function DashboardPage() {
   const [modalType, setModalType] = useState<TransactionType>('expense');
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [isDriveModalOpen, setIsDriveModalOpen] = useState(false);
+  const [showAdminMemberManager, setShowAdminMemberManager] = useState(false);
 
   // Savings Goal Quick Modal
   const [isSavingsModalOpen, setIsSavingsModalOpen] = useState(false);
@@ -89,8 +90,8 @@ export default function DashboardPage() {
           <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
             {currentDateFormatted}
           </span>
-          <h1 className="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-            Halo, {user?.name.split(' ')[0] || 'Kawan'} 👋
+          <h1 className="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-1.5">
+            Halo, {user?.name?.split(' ')[0] || 'Kawan'} <span>ðŸ‘‹</span>
           </h1>
         </div>
 
@@ -115,33 +116,6 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Superadmin Quick Switcher Bar (if superadmin) */}
-      {isSuperAdmin && (
-        <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between text-xs">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-amber-500" />
-            <div>
-              <span className="font-bold text-amber-900 dark:text-amber-300">
-                Superadmin ({user?.email || 'Owner'})
-              </span>
-              <p className="text-[10px] text-amber-700 dark:text-amber-400">
-                Status saat ini: <strong className="uppercase">{userPlan}</strong>
-              </p>
-            </div>
-          </div>
-
-          <button
-            onClick={() => setUserPlan(userPlan === 'pro' ? 'free' : 'pro')}
-            className="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-[11px] transition-colors"
-          >
-            Switch ke {userPlan === 'pro' ? 'FREE' : 'PRO'}
-          </button>
-        </div>
-      )}
-
-      {/* Superadmin Member Management Panel */}
-      {isSuperAdmin && <SuperAdminMemberManager />}
-
       {/* Hero Financial Card (Nordic Mint Neobank Midnight Anchor) */}
       <div className="relative overflow-hidden rounded-3xl bg-[#0b1329] p-6 text-white shadow-xl border border-slate-800/80 space-y-4">
         
@@ -151,7 +125,7 @@ export default function DashboardPage() {
               Total Saldo Bersih
             </span>
             <div className="text-3xl sm:text-4xl font-extrabold text-emerald-400 tracking-tight mt-1 tabular-nums">
-              {isBalanceHidden ? '••••••••' : `Rp ${totalBalance.toLocaleString('id-ID')}`}
+              {isBalanceHidden ? 'â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢' : `Rp ${totalBalance.toLocaleString('id-ID')}`}
             </div>
           </div>
 
@@ -169,7 +143,7 @@ export default function DashboardPage() {
             <div>
               <span className="text-[10px] font-semibold text-slate-400 block">Pemasukan Bulan Ini</span>
               <span className="text-sm font-extrabold text-emerald-400 tabular-nums">
-                {isBalanceHidden ? '••••••' : `+Rp ${totalIncomeMonth.toLocaleString('id-ID')}`}
+                {isBalanceHidden ? 'â€¢â€¢â€¢â€¢â€¢â€¢' : `+Rp ${totalIncomeMonth.toLocaleString('id-ID')}`}
               </span>
             </div>
           </div>
@@ -181,7 +155,7 @@ export default function DashboardPage() {
             <div>
               <span className="text-[10px] font-semibold text-slate-400 block">Pengeluaran Bulan Ini</span>
               <span className="text-sm font-extrabold text-rose-400 tabular-nums">
-                {isBalanceHidden ? '••••••' : `-Rp ${totalExpenseMonth.toLocaleString('id-ID')}`}
+                {isBalanceHidden ? 'â€¢â€¢â€¢â€¢â€¢â€¢' : `-Rp ${totalExpenseMonth.toLocaleString('id-ID')}`}
               </span>
             </div>
           </div>
@@ -196,7 +170,7 @@ export default function DashboardPage() {
               : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
           }`}>
             {netCashFlowMonth >= 0 ? '+' : ''}
-            {isBalanceHidden ? '••••' : `Rp ${netCashFlowMonth.toLocaleString('id-ID')}`}
+            {isBalanceHidden ? 'â€¢â€¢â€¢â€¢â€¢â€¢' : `Rp ${netCashFlowMonth.toLocaleString('id-ID')}`}
           </span>
         </div>
 
@@ -293,8 +267,7 @@ export default function DashboardPage() {
         </div>
 
         <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none snap-x">
-          {accounts.map((acc, idx) => {
-            // Nordic Modular Card Tints
+          {accounts.map((acc) => {
             const isBca = acc.name.toLowerCase().includes('bca');
             const isMandiri = acc.name.toLowerCase().includes('mandiri');
             
@@ -326,7 +299,7 @@ export default function DashboardPage() {
                     {acc.name}
                   </p>
                   <p className="text-sm font-extrabold text-slate-900 dark:text-white mt-0.5 tabular-nums">
-                    {isBalanceHidden ? '••••••' : `Rp ${acc.balance.toLocaleString('id-ID')}`}
+                    {isBalanceHidden ? 'â€¢â€¢â€¢â€¢â€¢â€¢' : `Rp ${acc.balance.toLocaleString('id-ID')}`}
                   </p>
                 </div>
               </Link>
@@ -509,7 +482,7 @@ export default function DashboardPage() {
                     </p>
                     <p className="text-[10px] text-slate-400 flex items-center gap-1.5 mt-0.5">
                       <span className="font-semibold text-slate-500 dark:text-slate-400">{tx.account_name}</span>
-                      <span>•</span>
+                      <span>â€¢</span>
                       <span>{tx.date}</span>
                     </p>
                   </div>
@@ -549,6 +522,45 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+
+      {/* Superadmin Collapsible Management Widget */}
+      {isSuperAdmin && (
+        <div className="rounded-3xl border border-amber-500/25 bg-amber-500/5 dark:bg-amber-950/20 p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-amber-500" />
+              <div>
+                <span className="text-xs font-bold text-amber-900 dark:text-amber-300 block">
+                  Superadmin Panel ({user?.email || 'Owner'})
+                </span>
+                <span className="text-[10px] text-amber-700/80 dark:text-amber-400/80">
+                  Simulasi aktif: <strong className="uppercase">{userPlan}</strong>
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setUserPlan(userPlan === 'pro' ? 'free' : 'pro')}
+                className="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-[11px] transition-colors"
+              >
+                Switch ke {userPlan === 'pro' ? 'FREE' : 'PRO'}
+              </button>
+              <button
+                onClick={() => setShowAdminMemberManager(!showAdminMemberManager)}
+                className="px-2.5 py-1 rounded-lg border border-amber-500/40 text-amber-700 dark:text-amber-300 font-bold text-[11px] hover:bg-amber-500/10 transition-colors"
+              >
+                {showAdminMemberManager ? 'Tutup Panel' : 'Kelola Member'}
+              </button>
+            </div>
+          </div>
+
+          {showAdminMemberManager && (
+            <div className="pt-3 border-t border-amber-500/20">
+              <SuperAdminMemberManager />
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Modals */}
       <TransactionModal
